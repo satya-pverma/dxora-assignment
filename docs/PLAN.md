@@ -19,6 +19,11 @@ Foundation is published on `main`. Integration research is documented in
 [INTEGRATION_RESEARCH.md](INTEGRATION_RESEARCH.md); model benchmarks and live
 publishing verification remain implementation tasks.
 
+Website extraction is implemented as an internal service with simulated-network
+tests. Local Windows validation with Python 3.13.17 passed all 42 tests and Ruff;
+live TLS/SNI verification remains pending. `/link-analysis` wiring and LLM work
+follow this PR.
+
 1. Establish this repository and record the implementation plan.
 2. PR: FastAPI foundation, environment configuration, tests, and CI.
 3. PR: Research five publishing APIs and at least three LLM models using official
