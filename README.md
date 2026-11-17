@@ -6,8 +6,9 @@ Python/FastAPI implementation of the two practical tests published in
 ## Status
 
 The FastAPI foundation, website extraction service, `/link-analysis`, and
-`/posting` orchestration are implemented. The five real publishing integrations
-are not implemented yet: the default posting adapters return explicit failures.
+`/posting` orchestration are implemented, with Mastodon, Bluesky, and WordPress.com
+publishing adapters. Tumblr and Telegram remain unimplemented. No live publishing
+has been demonstrated; missing credentials produce explicit failures.
 
 ## Setup
 
@@ -57,10 +58,11 @@ Platform selection belongs to the server. `POSTING_PLATFORMS` is a nonempty JSON
 array of unique names from `mastodon`, `bluesky`, `wordpress`, `tumblr`, and
 `telegram`; the default selects all five. `POSTING_TIMEOUT_SECONDS` defaults to
 15 and must be greater than zero and at most 60. Restart after changing `.env`.
-With no real integrations implemented, the default response has five failed
-results with the explanation `This platform integration is not implemented yet.`
-No posting credentials are currently consumed and this milestone makes no
-external publishing calls.
+With the example environment's empty credentials, Mastodon, Bluesky, and WordPress
+return `Platform credentials are not configured on the server.` Tumblr and
+Telegram return `This platform integration is not implemented yet.` Configuring
+credentials enables real publication when `/posting` is called; starting the
+server or running the tests does not publish messages.
 
 See the [sample request](docs/examples/posting.request.json) and
 [example default response](docs/examples/posting.response.json). These are
@@ -79,15 +81,61 @@ order. Exceptions and timeouts do not stop the other platforms. Error messages a
 sanitized rather than copied from upstream exceptions. Timeouts can occur after a
 provider has published: verify the destination before retrying. No automatic
 publication retry, durable idempotency, queue, or duplicate suppression is
-implemented; sending the same valid request again may publish again once real
-adapters exist. `PlatformAdapter`/`PublishedPost` define the contract those live
-integrations must implement in subsequent PRs.
+implemented; sending the same valid request again may publish again.
+`PlatformAdapter`/`PublishedPost` define the shared integration contract.
+
+### First three platform adapters
+
+Put credentials only in the ignored local `.env`, then restart the server.
+
+| Adapter | Required configuration | Account prerequisites |
+| --- | --- | --- |
+| Mastodon | `MASTODON_BASE_URL`, `MASTODON_ACCESS_TOKEN` | Public HTTPS instance and a user token with `write:statuses` scope |
+| Bluesky | `BLUESKY_PDS_URL`, `BLUESKY_HANDLE`, `BLUESKY_APP_PASSWORD` | Account, correct login/write PDS endpoint, and revocable app password |
+| WordPress.com | `WORDPRESS_SITE_ID`, `WORDPRESS_ACCESS_TOKEN` | Owned public site and OAuth user token with publishing permission |
+
+Mastodon and Bluesky base URLs must be HTTPS origins on port 443, with no paths,
+credentials, query strings, or fragments. All outbound destinations are resolved
+and pinned to public IPs, retaining Host/SNI and certificate validation. HTTP
+redirects and environment proxies are disabled, and JSON responses are limited
+to 256 KB. Tokens are sent only to the configured platform origin; WordPress
+uses its fixed official API. Upstream errors are sanitized and writes are not
+automatically retried, including after uncertain results.
+
+Mastodon requests public visibility and verifies the created status ID, URL, and
+content through an anonymous status read. WordPress escapes HTML, creates a
+clickable CTA, requests `publish` status, and verifies ID/URL/content through an
+anonymous API read. Bluesky creates a session, writes an `app.bsky.feed.post`
+record with UTF-8 link facets, and checks its URI/text through the public AppView.
+Its `createdAt` timestamp is generated locally in UTC and submitted with the
+record. Configure the actual PDS for your account; the adapter does not discover
+or follow response-provided service endpoints. It logs in once per invocation;
+cross-request session caching and refresh are not implemented, so frequent calls
+may hit login rate limits.
+
+Anonymous verification has a separate three-second deadline after publication
+confirmation. A platform can therefore take up to its publishing deadline plus
+three seconds. Verification failure/timeout preserves the confirmed post URL and
+returns `public_access=false`; Bluesky indexing delays or conservative text
+matching may cause false negatives. A successful API publication alone is never
+reported as proof of public access. Verification is a point-in-time API check,
+not a guarantee of future visibility or indexing in search engines.
+
+Adapter references: [Mastodon](https://docs.joinmastodon.org/methods/statuses/#create),
+[Bluesky](https://docs.bsky.app/docs/tutorials/creating-a-post),
+[WordPress.com](https://developer.wordpress.com/docs/api/1.1/post/sites/$site/posts/new/).
 
 Posting milestone validation reported from the local Windows terminal with
 Python 3.13.17: all 119 tests passed and Ruff reported all checks passed. The run
 emitted one Starlette TestClient deprecation warning concerning HTTPX. Compilation,
 OpenAPI generation, and local documentation links also passed checks in the editing
-session. No live publishing was attempted; real integrations remain unimplemented.
+session. No live publishing was attempted during that milestone.
+For the first-three-adapters milestone, local Windows verification with Python
+3.13.17 passed all 150 tests and Ruff. The run emitted one Starlette TestClient
+deprecation warning concerning HTTPX. Compilation, OpenAPI generation, and local
+documentation links also passed checks in the editing session. All adapter tests
+use simulated DNS/HTTP and fake credentials; live publishing and account access
+remain unverified.
 
 ## Website analysis API
 
@@ -205,14 +253,14 @@ The foundation is published on `main`. The remote is configured as
 `https://github.com/satya-pverma/dxora-assignment.git`.
 
 Each subsequent milestone uses a separate branch and pull request. Once the
-working changes are on `feat/posting-workflow`, review and publish them:
+working changes are on `feat/first-three-platforms`, review and publish them:
 
 ```powershell
-git add .env.example README.md docs app tests/test_posting.py
-git commit -m "feat: add validated multi-platform posting workflow"
-git push -u origin feat/posting-workflow
+git add .env.example README.md docs app tests/test_posting.py tests/test_platform_adapters.py
+git commit -m "feat: integrate Mastodon Bluesky and WordPress publishing"
+git push -u origin feat/first-three-platforms
 ```
 
-Then open a pull request from `feat/posting-workflow` into `main` in your own
+Then open a pull request from `feat/first-three-platforms` into `main` in your own
 repository. Review the changes and CI results before merging. Create the next
 feature branch from the updated `main` after merging.

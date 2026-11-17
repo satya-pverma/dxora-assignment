@@ -54,9 +54,13 @@ class PlatformAdapter(ABC):
         """Publish once and return the provider's confirmed post details.
 
         Raise PlatformError with a safe code on failure. Do not retry uncertain
-        publication outcomes blindly. public_access must reflect verification,
-        not merely the presence of a URL in the provider response.
+        publication outcomes blindly. Return public_access=False until verified;
+        orchestration invokes verify_public separately after confirmation.
         """
+
+    async def verify_public(self, post: PublishedPost, message: str, cta_url: str) -> bool:
+        """Verify anonymously after confirmation; the default preserves the adapter result."""
+        return post.public_access
 
 
 class UnavailableAdapter(PlatformAdapter):

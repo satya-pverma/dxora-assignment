@@ -1,6 +1,7 @@
 """Extract one explicit HTTP(S) CTA without fetching the destination."""
 
 import re
+from dataclasses import dataclass
 
 from pydantic import HttpUrl, TypeAdapter, ValidationError
 
@@ -9,7 +10,14 @@ SCHEME_PATTERN = re.compile(r"\b([a-z][a-z0-9+.-]*)://", re.IGNORECASE)
 LINK_PATTERN = re.compile(r"https?://[^\s<>\"']+", re.IGNORECASE)
 
 
-def extract_cta_url(message: str) -> str:
+@dataclass(frozen=True)
+class CTALink:
+    start: int
+    end: int
+    url: str
+
+
+def extract_cta_link(message: str) -> CTALink:
     schemes = list(SCHEME_PATTERN.finditer(message))
     links = list(LINK_PATTERN.finditer(message))
     if len(schemes) != 1 or len(links) != 1:
@@ -29,4 +37,8 @@ def extract_cta_url(message: str) -> str:
         raise ValueError("The CTA link must be a valid HTTP(S) URL.") from exc
     if url.username or url.password:
         raise ValueError("The CTA link must not contain credentials.")
-    return str(url)
+    return CTALink(links[0].start(), links[0].start() + len(value), str(url))
+
+
+def extract_cta_url(message: str) -> str:
+    return extract_cta_link(message).url

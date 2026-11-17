@@ -16,6 +16,7 @@ ERROR_MESSAGES = {
     "provider_error": "The platform returned an error.",
     "invalid_response": "The platform returned an invalid publication response.",
     "outcome_uncertain": "Publication could not be confirmed; verify before retrying.",
+    "invalid_configuration": "The configured platform endpoint is not a public HTTPS destination.",
 }
 TIMEOUT_MESSAGE = "Posting timed out; publication may have occurred. Verify before retrying."
 
@@ -48,14 +49,22 @@ class PostingService:
                 if not isinstance(post, PublishedPost):
                     raise PlatformError("invalid_response")
             published_at = post.published_at.astimezone(timezone.utc)
+            public_access = post.public_access
+            if not public_access:
+                try:
+                    # A visibility failure must not discard an already confirmed publication.
+                    async with asyncio.timeout(3):
+                        public_access = await adapter.verify_public(post, message, cta_url) is True
+                except Exception:
+                    public_access = False
             return PostingResult(
                 platform=adapter.name,
                 status="success",
                 posted_url=str(post.url),
-                public_access=post.public_access,
+                public_access=public_access,
                 date=published_at.date().isoformat(),
                 time=published_at.time().isoformat(),
-                error=None if post.public_access else "Public access could not be verified.",
+                error=None if public_access else "Public access could not be verified.",
             )
         except TimeoutError:
             message = TIMEOUT_MESSAGE
