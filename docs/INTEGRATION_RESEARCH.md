@@ -151,8 +151,9 @@ Until then, every performance and accuracy claim remains unmeasured.
 ## Account prerequisites before live testing
 
 Store secrets in the ignored local `.env`, never in commits, PRs, screenshots,
-chat messages, or logs. Candidate variable names below are proposals; the current
-application does not read these integration settings yet.
+chat messages, or logs. The OpenAI adapter now reads `OPENAI_API_KEY`, `LLM_MODEL`,
+`LLM_TIMEOUT_SECONDS`, and `LLM_MAX_OUTPUT_TOKENS`. Other integration variable
+names below remain proposals and are not read by the application yet.
 
 | Integration | Proposed configuration | Readiness |
 | --- | --- | --- |

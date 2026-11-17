@@ -5,8 +5,8 @@ Python/FastAPI implementation of the two practical tests published in
 
 ## Status
 
-The FastAPI foundation and website extraction service are implemented. The
-analysis and posting endpoints are not implemented yet.
+The FastAPI foundation, website extraction service, and `/link-analysis` endpoint
+are implemented. The posting endpoint is not implemented yet.
 
 ## Setup
 
@@ -34,6 +34,68 @@ API documentation: http://localhost:4000/docs
 - `POST /link-analysis`: website extraction and structured LLM analysis.
 - `POST /posting`: validated messages published through five independent integrations.
 - `GET /health`: application health check.
+
+## Website analysis API
+
+Set `OPENAI_API_KEY` in your ignored local `.env`. The server uses the OpenAI
+Responses API with `LLM_MODEL=gpt-6-luna` by default. No key is required for
+health checks or mocked tests. Restart the server after changing configuration.
+Only the OpenAI adapter is implemented; alternative providers in the research
+document are not automatic fallbacks.
+
+```powershell
+Invoke-RestMethod -Method Post -Uri http://localhost:4000/link-analysis `
+    -ContentType 'application/json' -Body '{"url":"https://example.com"}'
+```
+
+See the [sample request](docs/examples/link-analysis.request.json) and
+[complete synthetic response](docs/examples/link-analysis.response.json). The
+response is a validated test fixture, not a real analysis of example.com.
+
+The response includes `success`, `website`, `brand`, `analysis`, and `metadata`.
+Analysis contains competitor comparisons, exactly five distinct search queries
+covering Google/Facebook/Instagram/LinkedIn/X, SEO improvements, five service
+entries, and target audiences. Metadata includes the source URL, model, provider
+token usage when available, elapsed time, truncation, and evidence warnings.
+Observed services require a source quote present in the extracted text. If the
+page describes fewer than five services, additional ideas are explicitly marked
+`inferred_recommendation`; these are not claims about existing offerings.
+Competitors are always labelled `ai_suggestion` because independent competitor
+research is not part of this adapter. SEO and audience insights are suggestions,
+not measured rankings or search volumes. Quote matching checks textual presence;
+it does not prove that every model interpretation is correct.
+
+| HTTP status | Meaning |
+| --- | --- |
+| 200 | All five sections passed response validation |
+| 400 | Destination blocked or redirect unsafe |
+| 422 | Request body or URL format failed validation |
+| 502 | Website/provider failure, malformed model output, refusal, incomplete output, or unsupported quote |
+| 503 | Missing API key, provider authentication failure, or provider rate limit |
+| 504 | Website or model deadline exceeded |
+
+Service errors use `{"success":false,"error":{"code":"...","message":"..."}}`.
+Request validation uses FastAPI's standard `detail` array. Upstream error bodies
+and credentials are not returned to the caller.
+
+`LLM_TIMEOUT_SECONDS` defaults to 30 (allowed range: greater than zero through
+120). `LLM_MAX_OUTPUT_TOKENS` defaults to 6000 (allowed range: 1000–16000).
+The website fetch has its separate 10-second deadline. The model receives the
+cleaned page as untrusted data, with schema output and no tools. Provider requests
+disable response storage (`store=false`), do not follow redirects, have a 256 KB
+response bound, and are not retried automatically. This does not change the
+provider's independent data-retention policies. Calls incur provider charges;
+the 6000-token output cap is an upper bound, not measured usage or a cost estimate.
+Caching, automatic fallback, and cross-model benchmarks remain future work.
+
+Official contract: [OpenAI structured outputs](https://developers.openai.com/api/docs/guides/structured-outputs).
+Live model quality, actual token cost, and end-to-end latency have not been
+benchmarked. Unit/integration tests simulate the provider and website responses.
+Current milestone validation reported from the local Windows terminal with
+Python 3.13.17: all 75 tests passed and Ruff reported all checks passed. Compilation
+and OpenAPI generation also passed in the editing session. The test run emitted
+one Starlette TestClient deprecation warning concerning HTTPX. Live provider and
+HTTPS/SNI verification remain pending; the tests use simulated network responses.
 
 See [the implementation plan](docs/PLAN.md) for milestones and acceptance criteria.
 See [integration research](docs/INTEGRATION_RESEARCH.md) for the publishing APIs,
@@ -89,14 +151,14 @@ The foundation is published on `main`. The remote is configured as
 `https://github.com/satya-pverma/dxora-assignment.git`.
 
 Each subsequent milestone uses a separate branch and pull request. Once the
-working changes are on `feat/website-extraction`, review and publish them:
+working changes are on `feat/link-analysis`, review and publish them:
 
 ```powershell
-git add README.md docs/PLAN.md app/services app/utils tests/test_website_extractor.py
-git commit -m "feat: add bounded website extraction with SSRF protection"
-git push -u origin feat/website-extraction
+git add .env.example README.md docs app tests/test_link_analysis.py
+git commit -m "feat: add structured website analysis API"
+git push -u origin feat/link-analysis
 ```
 
-Then open a pull request from `feat/website-extraction` into `main` in your own
+Then open a pull request from `feat/link-analysis` into `main` in your own
 repository. Review the changes and CI results before merging. Create the next
 feature branch from the updated `main` after merging.
