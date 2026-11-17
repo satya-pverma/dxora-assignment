@@ -4,9 +4,17 @@ from fastapi import Depends, FastAPI
 from fastapi.responses import JSONResponse
 
 from app.config import get_settings
-from app.schemas import ErrorResponse, LinkAnalysisRequest, LinkAnalysisResponse
+from app.platforms.registry import build_adapters
+from app.schemas import (
+    ErrorResponse,
+    LinkAnalysisRequest,
+    LinkAnalysisResponse,
+    PostingRequest,
+    PostingResponse,
+)
 from app.services.analysis_service import AnalysisService
 from app.services.llm_service import LLMError, LLMService
+from app.services.posting_service import PostingService
 from app.services.website_extractor import WebsiteExtractor
 from app.utils.validators import WebsiteError
 
@@ -55,3 +63,18 @@ async def link_analysis(
     service: Annotated[AnalysisService, Depends(get_analysis_service)],
 ) -> LinkAnalysisResponse:
     return await service.analyze(body.url)
+
+
+def get_posting_service() -> PostingService:
+    settings = get_settings()
+    return PostingService(
+        build_adapters(settings.posting_platforms), settings.posting_timeout_seconds
+    )
+
+
+@app.post("/posting", response_model=PostingResponse, tags=["posting"])
+async def posting(
+    body: PostingRequest,
+    service: Annotated[PostingService, Depends(get_posting_service)],
+) -> PostingResponse:
+    return await service.post(body)

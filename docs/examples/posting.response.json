@@ -1,0 +1,50 @@
+{
+  "success": false,
+  "results": [
+    {
+      "platform": "mastodon",
+      "status": "failed",
+      "posted_url": null,
+      "public_access": false,
+      "date": null,
+      "time": null,
+      "error": "This platform integration is not implemented yet."
+    },
+    {
+      "platform": "bluesky",
+      "status": "failed",
+      "posted_url": null,
+      "public_access": false,
+      "date": null,
+      "time": null,
+      "error": "This platform integration is not implemented yet."
+    },
+    {
+      "platform": "wordpress",
+      "status": "failed",
+      "posted_url": null,
+      "public_access": false,
+      "date": null,
+      "time": null,
+      "error": "This platform integration is not implemented yet."
+    },
+    {
+      "platform": "tumblr",
+      "status": "failed",
+      "posted_url": null,
+      "public_access": false,
+      "date": null,
+      "time": null,
+      "error": "This platform integration is not implemented yet."
+    },
+    {
+      "platform": "telegram",
+      "status": "failed",
+      "posted_url": null,
+      "public_access": false,
+      "date": null,
+      "time": null,
+      "error": "This platform integration is not implemented yet."
+    }
+  ]
+}
