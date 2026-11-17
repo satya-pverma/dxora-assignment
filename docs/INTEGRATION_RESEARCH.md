@@ -3,8 +3,8 @@
 Research date: 17 November 2026. Scope: both practical tests. This document
 records official API capabilities and proposed implementation choices. No live
 publishing, account authentication, model benchmarking, or paid API calls were
-performed. Mastodon, Bluesky, and WordPress.com adapters are now implemented with
-mocked tests; Tumblr and Telegram remain unimplemented. All five still need live
+performed. All five publishing adapters are now implemented with mocked tests.
+All five still need live
 verification. Prices and account eligibility must be rechecked before deployment.
 
 ## Publishing platforms
@@ -155,9 +155,10 @@ Store secrets in the ignored local `.env`, never in commits, PRs, screenshots,
 chat messages, or logs. The OpenAI adapter now reads `OPENAI_API_KEY`, `LLM_MODEL`,
 `LLM_TIMEOUT_SECONDS`, and `LLM_MAX_OUTPUT_TOKENS`.
 The posting workflow also reads `POSTING_PLATFORMS` (a JSON array of platform
-names) and `POSTING_TIMEOUT_SECONDS`. Mastodon, Bluesky, and WordPress.com now
-consume the listed configuration/credentials when `/posting` is invoked. Their
-account access remains unverified. Tumblr/Telegram variables remain proposals.
+names) and `POSTING_TIMEOUT_SECONDS`. All five adapters now consume the listed
+configuration/credentials when `/posting` is invoked. Account access remains
+unverified. Tumblr token refresh is not implemented; supply a current token.
+Telegram channel ID is optional when its public username is configured.
 
 | Integration | Proposed configuration | Readiness |
 | --- | --- | --- |

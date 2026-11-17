@@ -1,7 +1,9 @@
 from app.config import Settings
-from app.platforms.base import PlatformAdapter, PublishingPlatform, UnavailableAdapter
+from app.platforms.base import PlatformAdapter, PublishingPlatform
 from app.platforms.bluesky import BlueskyAdapter
 from app.platforms.mastodon import MastodonAdapter
+from app.platforms.telegram import TelegramAdapter
+from app.platforms.tumblr import TumblrAdapter
 from app.platforms.wordpress import WordPressAdapter
 
 
@@ -13,8 +15,7 @@ def build_adapters(
         "mastodon": MastodonAdapter,
         "bluesky": BlueskyAdapter,
         "wordpress": WordPressAdapter,
+        "tumblr": TumblrAdapter,
+        "telegram": TelegramAdapter,
     }
-    return [
-        available[name](settings) if name in available else UnavailableAdapter(name)
-        for name in platforms
-    ]
+    return [available[name](settings) for name in platforms]
