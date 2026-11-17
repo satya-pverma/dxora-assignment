@@ -11,6 +11,8 @@ from pydantic import (
     model_validator,
 )
 
+from app.platforms.base import PublishingPlatform
+from app.utils.message_validator import extract_cta_url
 from app.utils.validators import normalize_website_url
 
 Text = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=2000)]
@@ -150,3 +152,34 @@ class ErrorDetail(StrictModel):
 class ErrorResponse(StrictModel):
     success: Literal[False] = False
     error: ErrorDetail
+
+
+class PostingRequest(StrictModel):
+    message: str = Field(min_length=1, max_length=200)
+
+    @field_validator("message")
+    @classmethod
+    def validate_message(cls, value: str) -> str:
+        if any(ord(char) < 32 and char not in "\n\r\t" for char in value) or "\x7f" in value:
+            raise ValueError("Messages must not contain control characters.")
+        extract_cta_url(value)
+        return value
+
+    @property
+    def cta_url(self) -> str:
+        return extract_cta_url(self.message)
+
+
+class PostingResult(StrictModel):
+    platform: PublishingPlatform
+    status: Literal["success", "failed"]
+    posted_url: str | None
+    public_access: bool
+    date: str | None
+    time: str | None
+    error: str | None
+
+
+class PostingResponse(StrictModel):
+    success: bool
+    results: list[PostingResult]

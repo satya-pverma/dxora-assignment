@@ -154,6 +154,9 @@ Store secrets in the ignored local `.env`, never in commits, PRs, screenshots,
 chat messages, or logs. The OpenAI adapter now reads `OPENAI_API_KEY`, `LLM_MODEL`,
 `LLM_TIMEOUT_SECONDS`, and `LLM_MAX_OUTPUT_TOKENS`. Other integration variable
 names below remain proposals and are not read by the application yet.
+The posting workflow also reads `POSTING_PLATFORMS` (a JSON array of platform
+names) and `POSTING_TIMEOUT_SECONDS`. Publishing credentials are not consumed
+until the corresponding real adapters are implemented.
 
 | Integration | Proposed configuration | Readiness |
 | --- | --- | --- |

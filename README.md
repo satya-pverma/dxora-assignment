@@ -5,8 +5,9 @@ Python/FastAPI implementation of the two practical tests published in
 
 ## Status
 
-The FastAPI foundation, website extraction service, and `/link-analysis` endpoint
-are implemented. The posting endpoint is not implemented yet.
+The FastAPI foundation, website extraction service, `/link-analysis`, and
+`/posting` orchestration are implemented. The five real publishing integrations
+are not implemented yet: the default posting adapters return explicit failures.
 
 ## Setup
 
@@ -29,11 +30,64 @@ API documentation: http://localhost:4000/docs
 .\.venv\Scripts\python.exe -m ruff check .
 ```
 
-## Planned APIs
+## APIs
 
 - `POST /link-analysis`: website extraction and structured LLM analysis.
 - `POST /posting`: validated messages published through five independent integrations.
 - `GET /health`: application health check.
+
+## Posting API
+
+```powershell
+Invoke-RestMethod -Method Post -Uri http://localhost:4000/posting `
+    -ContentType 'application/json' `
+    -Body '{"message":"Discover our services https://example.com"}'
+```
+
+The message must contain at most 200 Unicode characters (including its link and
+whitespace) and exactly one explicit HTTP(S) URL. URL credentials and invalid
+control characters are rejected. Surrounding parentheses/angle brackets and
+ordinary trailing punctuation are supported. The original message is preserved;
+the separately extracted CTA is normalized for adapters. CTA validation does not
+fetch the link or perform DNS resolution. URLs without `http://` or `https://`
+are not accepted as the required CTA. Invalid request bodies return HTTP 422 and
+are not sent to any adapter. Request fields other than `message` are forbidden.
+
+Platform selection belongs to the server. `POSTING_PLATFORMS` is a nonempty JSON
+array of unique names from `mastodon`, `bluesky`, `wordpress`, `tumblr`, and
+`telegram`; the default selects all five. `POSTING_TIMEOUT_SECONDS` defaults to
+15 and must be greater than zero and at most 60. Restart after changing `.env`.
+With no real integrations implemented, the default response has five failed
+results with the explanation `This platform integration is not implemented yet.`
+No posting credentials are currently consumed and this milestone makes no
+external publishing calls.
+
+See the [sample request](docs/examples/posting.request.json) and
+[example default response](docs/examples/posting.response.json). These are
+contract examples, not evidence of live publication.
+
+For a valid request, HTTP 200 contains every selected platform's result, including
+when all platforms fail. Each result has `platform`, `status`, `posted_url`,
+`public_access`, `date`, `time`, and `error`. Overall `success` is true only if all
+selected platforms confirm publication. Failed publications have null URL/date/
+time and `public_access=false`. Dates and times are in UTC. A confirmed post whose
+public access cannot be verified retains its success status, URL, and timestamp,
+but has `public_access=false` and a verification explanation in `error`.
+
+Adapters run concurrently with independent deadlines and results in configuration
+order. Exceptions and timeouts do not stop the other platforms. Error messages are
+sanitized rather than copied from upstream exceptions. Timeouts can occur after a
+provider has published: verify the destination before retrying. No automatic
+publication retry, durable idempotency, queue, or duplicate suppression is
+implemented; sending the same valid request again may publish again once real
+adapters exist. `PlatformAdapter`/`PublishedPost` define the contract those live
+integrations must implement in subsequent PRs.
+
+Posting milestone validation reported from the local Windows terminal with
+Python 3.13.17: all 119 tests passed and Ruff reported all checks passed. The run
+emitted one Starlette TestClient deprecation warning concerning HTTPX. Compilation,
+OpenAPI generation, and local documentation links also passed checks in the editing
+session. No live publishing was attempted; real integrations remain unimplemented.
 
 ## Website analysis API
 
@@ -151,14 +205,14 @@ The foundation is published on `main`. The remote is configured as
 `https://github.com/satya-pverma/dxora-assignment.git`.
 
 Each subsequent milestone uses a separate branch and pull request. Once the
-working changes are on `feat/link-analysis`, review and publish them:
+working changes are on `feat/posting-workflow`, review and publish them:
 
 ```powershell
-git add .env.example README.md docs app tests/test_link_analysis.py
-git commit -m "feat: add structured website analysis API"
-git push -u origin feat/link-analysis
+git add .env.example README.md docs app tests/test_posting.py
+git commit -m "feat: add validated multi-platform posting workflow"
+git push -u origin feat/posting-workflow
 ```
 
-Then open a pull request from `feat/link-analysis` into `main` in your own
+Then open a pull request from `feat/posting-workflow` into `main` in your own
 repository. Review the changes and CI results before merging. Create the next
 feature branch from the updated `main` after merging.
