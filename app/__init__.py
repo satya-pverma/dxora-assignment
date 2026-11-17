@@ -1,0 +1,1 @@
+"""Dxora practical assignment application."""
