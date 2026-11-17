@@ -35,6 +35,8 @@ python -m ruff check .
 - `GET /health`: application health check.
 
 See [the implementation plan](docs/PLAN.md) for milestones and acceptance criteria.
+See [integration research](docs/INTEGRATION_RESEARCH.md) for the publishing APIs,
+LLM comparison, recommended model, and account prerequisites.
 All development branches and pull requests target this repository. No writes or
 pull requests will be made to the assignment's source repository.
 
@@ -42,16 +44,18 @@ Never commit API keys, account tokens, or unsanitized demonstration logs.
 
 ## Manual GitHub workflow
 
-The local repository has a planning commit on `main` and a foundation commit on
-`chore/project-foundation`. The remote is already configured as
+The foundation is published on `main`. The remote is configured as
 `https://github.com/satya-pverma/dxora-assignment.git`.
 
-For the empty remote repository, publish both branches:
+Each subsequent milestone uses a separate branch and pull request. For this
+research milestone, review and publish the changes:
 
 ```powershell
-git push -u origin main
-git push -u origin chore/project-foundation
+git add README.md docs/PLAN.md docs/INTEGRATION_RESEARCH.md
+git commit -m "docs: research publishing APIs and LLM selection"
+git push -u origin docs/integration-research
 ```
 
-Then open a pull request from `chore/project-foundation` into `main` in your own
-repository. Review the changes and CI results before merging.
+Then open a pull request from `docs/integration-research` into `main` in your own
+repository. Review the changes and CI results before merging. Create the next
+feature branch from the updated `main` after merging.
