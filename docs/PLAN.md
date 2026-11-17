@@ -15,67 +15,33 @@ Review checks before merging. Never push to the source specification repository.
 
 ## Milestones
 
-Foundation is published on `main`. Integration research is documented in
-[INTEGRATION_RESEARCH.md](INTEGRATION_RESEARCH.md); model benchmarks and live
-publishing verification remain implementation tasks.
+| Step | Deliverable | Status |
+| --- | --- | --- |
+| 1 | Own repository and implementation plan | Completed |
+| 2 | FastAPI foundation, environment configuration, tests, CI | Merged |
+| 3 | Five publishing APIs and at least three LLM options, pricing and recommendations | Merged; benchmarks remain unmeasured |
+| 4 | URL validation, SSRF protection, bounded website extraction | Merged; live TLS/SNI check pending |
+| 5 | Structured `/link-analysis`, validation, inference labels, errors and tests | Merged; live model verification pending |
+| 6 | `/posting` validation, internal selection, adapter contracts and failure isolation | Merged |
+| 7 | Mastodon, Bluesky, WordPress.com adapters and mocked coverage | Merged; live accounts/publication unverified |
+| 8 | Tumblr, Telegram, anonymous visibility checks and partial failures | Merged; live accounts/publication unverified |
+| 9 | Final documentation, dependency snapshot, verification instructions and submission checklist | Handoff prepared; PR/CI and live evidence outstanding |
 
-Website extraction is implemented as an internal service with simulated-network
-tests. Local Windows validation with Python 3.13.17 passed all 42 tests and Ruff;
-live TLS/SNI verification remains pending. The extraction PR is merged.
+Latest supplied local verification: all **196 tests passed** and Ruff passed on
+Windows/Python 3.13.17. Compilation, OpenAPI generation and documentation links
+also passed local checks. The tested dependency snapshot and expanded CI are
+part of the final handoff; actual new CI results must be checked after pushing.
 
-The merged analysis milestone implements `/link-analysis` with one OpenAI structured-output
-call, validated analysis schemas, evidence warnings, provider error handling,
-and mocked API tests. Live model benchmarking, cross-provider fallback, and
-caching remain deferred and must not be described as completed.
-Local Windows verification with Python 3.13.17 passed all 75 tests and Ruff.
-Compilation and OpenAPI generation also passed. Live provider verification,
-model benchmarks, and HTTPS/SNI verification remain pending.
+See [integration research](INTEGRATION_RESEARCH.md),
+[verification and live-evidence instructions](VERIFICATION.md), and
+[submission checklist](SUBMISSION_CHECKLIST.md).
 
-The merged posting milestone adds `/posting` validation, a shared adapter
-contract, internal configurable selection, independent timeouts/failure results,
-and tests with fake adapters. Default adapters explicitly report unavailable
-integrations; this is not completion of the five live integrations. Local Windows
-verification with Python 3.13.17 passed all 119 tests and Ruff. Compilation,
-OpenAPI generation, and local documentation links also passed.
-
-The merged milestone implements Mastodon, Bluesky, and WordPress.com adapters,
-bounded/pinned HTTP requests, credential configuration, UTF-8 CTA facets, escaped
-HTML, anonymous public checks, and mocked integration tests. Confirmed post URLs
-survive visibility failures. Local Windows verification with Python 3.13.17 passed
-all 150 tests and Ruff. Compilation, OpenAPI generation, and local documentation
-links also passed. Live publication and account access remain unverified.
-
-The current milestone adds Tumblr NPF and Telegram public-channel publishing,
-credential validation, anonymous visibility checks, Telegram token-safe transport,
-and mocked five-platform partial-failure coverage. All five registry entries now
-use real adapters; no credentials means five explicit configuration failures.
-Local Windows verification with Python 3.13.17 passed all 196 tests and Ruff.
-Compilation, OpenAPI generation, and local documentation links also passed.
-Live account access/publication, model benchmarks, and final demonstration evidence remain
-outstanding. Documentation and submission verification follow this PR.
-
-1. Establish this repository and record the implementation plan.
-2. PR: FastAPI foundation, environment configuration, tests, and CI.
-3. PR: Research five publishing APIs and at least three LLM models using official
-   documentation. Record authentication requirements, current pricing, limitations,
-   model recommendation, fallback, estimated tokens/cost, and cost optimizations.
-4. PR: URL validation, SSRF protection including redirects and DNS resolution,
-   bounded website fetching, HTML extraction, and cleaned content.
-5. PR: LLM integration and validated `/link-analysis` response with competitor
-   analysis, exactly five search queries covering the supported platforms, SEO
-   recommendations, top five services, and target audiences. Clearly mark
-   inferences and unverified competitor suggestions; never invent search volumes.
-6. PR: `/posting` validation (maximum 200 characters, exactly one valid CTA URL),
-   platform adapters, internal selection, and independent failure handling.
-7. PR: First three actual publishing integrations.
-8. PR: Two remaining publishing integrations and partial-failure verification.
-9. PR: Final checks, README, sample requests/responses, sanitized demonstration
-   evidence, and submission checklist.
-
-Tests accompany each implementation PR. Mocked tests are not evidence of actual
-publishing. Live demonstrations require configured accounts and an explicitly
-authorized message and destinations. Research credentials and publishing access
-early; do not count a non-publishing LLM call as a publishing integration.
+Mocked tests do not prove account access, public publication, model quality, or
+model speed/cost. None of the six required provider credentials is configured in
+the current local environment. Live demonstrations require those prerequisites
+plus an explicitly authorized message and destinations. Automatic cross-provider
+fallback, caching, token refresh, and model benchmarks have not been implemented
+or measured and must not be presented as completed.
 
 ## Acceptance criteria
 

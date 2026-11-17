@@ -10,6 +10,13 @@ The FastAPI foundation, website extraction service, `/link-analysis`, and
 Tumblr, and Telegram publishing adapters. No live publishing has been demonstrated;
 missing credentials produce explicit failures.
 
+Latest supplied local verification: **196 tests passed and Ruff passed** on
+Windows with Python 3.13.17. Live LLM calls, public posting, and model benchmarks
+remain unverified; no credentials are configured in the current local environment.
+See [verification and evidence](docs/VERIFICATION.md),
+[submission checklist](docs/SUBMISSION_CHECKLIST.md), and
+[implementation progress](docs/PLAN.md).
+
 ## Setup
 
 Requires Python 3.11 or later.
@@ -19,16 +26,26 @@ interpreter directly; activation is optional.
 
 ```powershell
 py -3.13 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
-Copy-Item .env.example .env
-.\.venv\Scripts\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 4000
+.\.venv\Scripts\python.exe -m pip install -r requirements-tested.txt
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 4000
 ```
+
+`requirements-tested.txt` snapshots the tested Windows/Python 3.13 package
+versions, including test tools. For other supported environments, install
+`requirements-dev.txt` instead; it uses version ranges. This repository's CI
+checks Linux/Python 3.11 with those ranges and Windows/Python 3.13 with the
+snapshot. CI results must be checked on the actual PR. The assignment's server
+command may use `--host 0.0.0.0` on the same port; the local default above binds
+only to your machine. The application has no inbound API authentication.
 
 API documentation: http://localhost:4000/docs
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest
 .\.venv\Scripts\python.exe -m ruff check .
+.\.venv\Scripts\python.exe -m pip check
+.\.venv\Scripts\python.exe -m scripts.check_credentials
 ```
 
 ## APIs
@@ -162,23 +179,11 @@ References: [Tumblr API](https://github.com/tumblr/docs/blob/master/api.md),
 [Telegram Bot API](https://core.telegram.org/bots/api#sendmessage),
 [public message links](https://core.telegram.org/api/links#public-message-links).
 
-This milestone adds mocked Tumblr/Telegram and five-platform partial-failure
-coverage. Local Windows verification with Python 3.13.17 passed all 196 tests and
-Ruff. The run emitted one Starlette TestClient deprecation warning concerning
-HTTPX. Compilation, OpenAPI generation, and local documentation links also passed.
-No live publication, OAuth login, or permission changes were performed.
-
-Posting milestone validation reported from the local Windows terminal with
-Python 3.13.17: all 119 tests passed and Ruff reported all checks passed. The run
-emitted one Starlette TestClient deprecation warning concerning HTTPX. Compilation,
-OpenAPI generation, and local documentation links also passed checks in the editing
-session. No live publishing was attempted during that milestone.
-For the first-three-adapters milestone, local Windows verification with Python
-3.13.17 passed all 150 tests and Ruff. The run emitted one Starlette TestClient
-deprecation warning concerning HTTPX. Compilation, OpenAPI generation, and local
-documentation links also passed checks in the editing session. All adapter tests
-use simulated DNS/HTTP and fake credentials; live publishing and account access
-remain unverified.
+Tests cover all five adapters, partial failures, visibility checks, bounded HTTP,
+configuration validation, and token-safe logging using simulated DNS/HTTP and
+fake credentials. No live publication, OAuth login, or permission changes were
+performed. See [recorded verification](docs/VERIFICATION.md) for the results and
+the remaining live checks.
 
 ## Website analysis API
 
@@ -236,11 +241,36 @@ Caching, automatic fallback, and cross-model benchmarks remain future work.
 Official contract: [OpenAI structured outputs](https://developers.openai.com/api/docs/guides/structured-outputs).
 Live model quality, actual token cost, and end-to-end latency have not been
 benchmarked. Unit/integration tests simulate the provider and website responses.
-Current milestone validation reported from the local Windows terminal with
-Python 3.13.17: all 75 tests passed and Ruff reported all checks passed. Compilation
-and OpenAPI generation also passed in the editing session. The test run emitted
-one Starlette TestClient deprecation warning concerning HTTPX. Live provider and
-HTTPS/SNI verification remain pending; the tests use simulated network responses.
+
+## LLM comparison and selection
+
+The researched baseline is OpenAI `gpt-6-luna`, selected provisionally for listed
+cost, structured JSON support, and context capacity. No candidate has been proven
+most accurate or fastest on this application's workload. Standard text pricing
+checked on 17 November 2026, in USD per million tokens:
+
+| Candidate | Input / output | Context | JSON schema output | Illustrative analysis cost |
+| --- | --- | --- | --- | --- |
+| OpenAI `gpt-6-luna` | $0.10 / $0.50 | 1,050,000 tokens | Supported | $0.0018 |
+| Google `gemini-3.8-flash` | $0.75 / $3.75 through 31 Dec 2026 | 1,048,576 input tokens | Supported | $0.0135 |
+| Anthropic `claude-haiku-5-5` | $0.10 / $0.50 for prompts up to 100,000 tokens | 1M tokens | Supported; model/account integration untested | $0.0018 |
+
+These examples assume 8,000 input and 2,000 billable output tokens, exclude tools,
+retries/taxes, and are estimates. The implementation's 6,000-output-token cap is
+larger than that assumption. Gemini rates rise to $1.50/$7.50 on 1 January 2027;
+Haiku's over-100k prompt tier is $0.50/$2.50. Count actual provider usage, including
+reasoning, for a real bill. Tokenizers differ.
+
+Expected model response target is 5–20 seconds, with a separate ten-second website
+fetch budget; these are unmeasured targets, not benchmarks or SLAs. Recommended
+configured alternative: Gemini Flash if the baseline fails quality evaluation.
+Only OpenAI is implemented; automatic fallback is not. Clean and bound content,
+remove duplicate boilerplate, and request all sections together to control cost.
+Caching and cross-model evaluations remain future work.
+
+[The detailed research report](docs/INTEGRATION_RESEARCH.md) includes official
+pricing/model sources, cost calculations, caveats, a benchmark rubric, and the
+fallback recommendation. Recheck prices and model entitlement before live use.
 
 See [the implementation plan](docs/PLAN.md) for milestones and acceptance criteria.
 See [integration research](docs/INTEGRATION_RESEARCH.md) for the publishing APIs,
@@ -254,7 +284,7 @@ Never commit API keys, account tokens, or unsanitized demonstration logs.
 
 `WebsiteExtractor` fetches one static HTML page and returns its requested/final
 URL, title, description, headings, cleaned text, and truncation flag. It is an
-internal service for the upcoming `/link-analysis` endpoint.
+internal service used by the `/link-analysis` endpoint.
 
 ```python
 import asyncio
@@ -285,10 +315,8 @@ Tests use simulated DNS and HTTP responses; they do not contact external website
 .\.venv\Scripts\python.exe -m pytest tests/test_website_extractor.py
 ```
 
-Validation reported from the local Windows environment with Python 3.13.17:
-42 tests passed, and Ruff reported all checks passed. The run emitted one
-Starlette TestClient deprecation warning concerning HTTPX. Live HTTPS/SNI
-verification remains pending in an environment with outbound access.
+Live HTTPS/SNI verification remains pending. The full mocked regression result
+and known TestClient deprecation warning are recorded in the verification report.
 
 ## Manual GitHub workflow
 
@@ -296,14 +324,14 @@ The foundation is published on `main`. The remote is configured as
 `https://github.com/satya-pverma/dxora-assignment.git`.
 
 Each subsequent milestone uses a separate branch and pull request. Once the
-working changes are on `feat/tumblr-telegram`, review and publish them:
+working changes are on `chore/submission-handoff`, review and publish them:
 
 ```powershell
-git add .env.example README.md docs app tests/test_posting.py tests/test_remaining_adapters.py
-git commit -m "feat: integrate Tumblr and Telegram publishing"
-git push -u origin feat/tumblr-telegram
+git add .gitignore .github/workflows/ci.yml README.md docs requirements-tested.txt scripts
+git commit -m "chore: prepare submission handoff and reproducible checks"
+git push -u origin chore/submission-handoff
 ```
 
-Then open a pull request from `feat/tumblr-telegram` into `main` in your own
+Then open a pull request from `chore/submission-handoff` into `main` in your own
 repository. Review the changes and CI results before merging. Create the next
 feature branch from the updated `main` after merging.
