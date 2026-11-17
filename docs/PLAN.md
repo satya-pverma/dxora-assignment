@@ -15,6 +15,10 @@ Review checks before merging. Never push to the source specification repository.
 
 ## Milestones
 
+Foundation is published on `main`. Integration research is documented in
+[INTEGRATION_RESEARCH.md](INTEGRATION_RESEARCH.md); model benchmarks and live
+publishing verification remain implementation tasks.
+
 1. Establish this repository and record the implementation plan.
 2. PR: FastAPI foundation, environment configuration, tests, and CI.
 3. PR: Research five publishing APIs and at least three LLM models using official
