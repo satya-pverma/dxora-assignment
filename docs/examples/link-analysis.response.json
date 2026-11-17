@@ -1,0 +1,176 @@
+{
+  "brand": {
+    "name": "Example Studio",
+    "category": "Design",
+    "summary": "Web design studio.",
+    "products_and_services": [
+      "Web design"
+    ]
+  },
+  "analysis": {
+    "competitor_analysis": {
+      "brand_overview": "Small design studio.",
+      "competitors": [],
+      "strengths": [
+        "Design focus"
+      ],
+      "competitive_advantages": [],
+      "opportunities": [
+        "Publish case studies"
+      ]
+    },
+    "target_search_queries": [
+      {
+        "query": "web design studio",
+        "platforms": [
+          "Google"
+        ],
+        "intent": "Find design services",
+        "business_relevance": "Design",
+        "target_audience": "Small businesses"
+      },
+      {
+        "query": "local website designers",
+        "platforms": [
+          "Facebook"
+        ],
+        "intent": "Find design services",
+        "business_relevance": "Design",
+        "target_audience": "Small businesses"
+      },
+      {
+        "query": "website design ideas",
+        "platforms": [
+          "Instagram"
+        ],
+        "intent": "Find design services",
+        "business_relevance": "Design",
+        "target_audience": "Small businesses"
+      },
+      {
+        "query": "business website design",
+        "platforms": [
+          "LinkedIn"
+        ],
+        "intent": "Find design services",
+        "business_relevance": "Design",
+        "target_audience": "Small businesses"
+      },
+      {
+        "query": "small business design services",
+        "platforms": [
+          "X"
+        ],
+        "intent": "Find design services",
+        "business_relevance": "Design",
+        "target_audience": "Small businesses"
+      }
+    ],
+    "seo_improvements": {
+      "primary_keyword": "web design",
+      "secondary_keywords": [
+        "website studio"
+      ],
+      "long_tail_keywords": [
+        "website design for businesses"
+      ],
+      "business_keywords": [
+        "design services"
+      ],
+      "recommended_title": "Example Studio | Web Design",
+      "title_rationale": "Names the service and brand.",
+      "meta_description": "Explore web design from Example Studio.",
+      "supporting_content": [
+        "Design case studies"
+      ]
+    },
+    "top_services": [
+      {
+        "name": "Web design",
+        "description": "Website-related service.",
+        "target_industry": "Small business",
+        "target_customer": "Business owners",
+        "main_benefit": "Improve online presence",
+        "evidence_type": "observed",
+        "source_quote": "We offer web design."
+      },
+      {
+        "name": "SEO audit",
+        "description": "Website-related service.",
+        "target_industry": "Small business",
+        "target_customer": "Business owners",
+        "main_benefit": "Improve online presence",
+        "evidence_type": "inferred_recommendation",
+        "source_quote": null
+      },
+      {
+        "name": "Maintenance",
+        "description": "Website-related service.",
+        "target_industry": "Small business",
+        "target_customer": "Business owners",
+        "main_benefit": "Improve online presence",
+        "evidence_type": "inferred_recommendation",
+        "source_quote": null
+      },
+      {
+        "name": "Brand design",
+        "description": "Website-related service.",
+        "target_industry": "Small business",
+        "target_customer": "Business owners",
+        "main_benefit": "Improve online presence",
+        "evidence_type": "inferred_recommendation",
+        "source_quote": null
+      },
+      {
+        "name": "Accessibility audit",
+        "description": "Website-related service.",
+        "target_industry": "Small business",
+        "target_customer": "Business owners",
+        "main_benefit": "Improve online presence",
+        "evidence_type": "inferred_recommendation",
+        "source_quote": null
+      }
+    ],
+    "target_audience": {
+      "primary_audience": [
+        "Small businesses"
+      ],
+      "secondary_audience": [],
+      "industries": [
+        "Professional services"
+      ],
+      "business_types": [
+        "Startups"
+      ],
+      "customer_profiles": [
+        "Owners needing a website"
+      ],
+      "geographical_focus": null,
+      "customer_needs": [
+        "Online presence"
+      ],
+      "interests": [
+        "Design"
+      ],
+      "marketing_segments": [
+        "New businesses"
+      ]
+    }
+  },
+  "success": true,
+  "website": "https://example.com/",
+  "metadata": {
+    "provider": "openai",
+    "model": "gpt-6-luna",
+    "source_url": "https://example.com/about",
+    "content_truncated": false,
+    "input_tokens": null,
+    "output_tokens": null,
+    "elapsed_seconds": 0.0,
+    "warnings": [
+      "SYNTHETIC schema example from a test fixture; no live request was made.",
+      "Competitors are unverified AI suggestions.",
+      "Four service entries are inferred recommendations."
+    ]
+  }
+}

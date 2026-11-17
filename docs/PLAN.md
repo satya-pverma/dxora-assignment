@@ -24,6 +24,14 @@ tests. Local Windows validation with Python 3.13.17 passed all 42 tests and Ruff
 live TLS/SNI verification remains pending. `/link-analysis` wiring and LLM work
 follow this PR.
 
+The next milestone implements `/link-analysis` with one OpenAI structured-output
+call, validated analysis schemas, evidence warnings, provider error handling,
+and mocked API tests. Live model benchmarking, cross-provider fallback, and
+caching remain deferred and must not be described as completed.
+Local Windows verification with Python 3.13.17 passed all 75 tests and Ruff.
+Compilation and OpenAPI generation also passed. Live provider verification,
+model benchmarks, and HTTPS/SNI verification remain pending.
+
 1. Establish this repository and record the implementation plan.
 2. PR: FastAPI foundation, environment configuration, tests, and CI.
 3. PR: Research five publishing APIs and at least three LLM models using official
