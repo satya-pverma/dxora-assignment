@@ -8,7 +8,7 @@
       "public_access": false,
       "date": null,
       "time": null,
-      "error": "This platform integration is not implemented yet."
+      "error": "Platform credentials are not configured on the server."
     },
     {
       "platform": "bluesky",
@@ -17,7 +17,7 @@
       "public_access": false,
       "date": null,
       "time": null,
-      "error": "This platform integration is not implemented yet."
+      "error": "Platform credentials are not configured on the server."
     },
     {
       "platform": "wordpress",
@@ -26,7 +26,7 @@
       "public_access": false,
       "date": null,
       "time": null,
-      "error": "This platform integration is not implemented yet."
+      "error": "Platform credentials are not configured on the server."
     },
     {
       "platform": "tumblr",

@@ -68,7 +68,7 @@ async def link_analysis(
 def get_posting_service() -> PostingService:
     settings = get_settings()
     return PostingService(
-        build_adapters(settings.posting_platforms), settings.posting_timeout_seconds
+        build_adapters(settings.posting_platforms, settings), settings.posting_timeout_seconds
     )
 
 
