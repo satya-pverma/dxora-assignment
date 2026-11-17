@@ -1,3 +1,4 @@
+import re
 from functools import lru_cache
 
 from pydantic import Field, SecretStr, field_validator
@@ -8,7 +9,7 @@ from app.utils.validators import normalize_website_url
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore", hide_input_in_errors=True)
 
     app_name: str = "Dxora Assignment"
     openai_api_key: SecretStr = SecretStr("")
@@ -26,6 +27,48 @@ class Settings(BaseSettings):
     bluesky_app_password: SecretStr = SecretStr("")
     wordpress_site_id: str = Field(default="", pattern=r"^[a-zA-Z0-9.-]*$")
     wordpress_access_token: SecretStr = SecretStr("")
+    tumblr_blog_identifier: str = ""
+    tumblr_access_token: SecretStr = SecretStr("")
+    telegram_bot_token: SecretStr = SecretStr("")
+    telegram_channel_id: str = ""
+    telegram_channel_username: str = ""
+
+    @field_validator("tumblr_blog_identifier")
+    @classmethod
+    def require_tumblr_blog(cls, value: str) -> str:
+        if not value:
+            return value
+        value = value.lower()
+        if not value.endswith(".tumblr.com"):
+            value += ".tumblr.com"
+        if not re.fullmatch(r"[a-z0-9](?:[a-z0-9-]{0,30}[a-z0-9])?\.tumblr\.com", value):
+            raise ValueError("Use a Tumblr blog name or its name.tumblr.com hostname.")
+        return value
+
+    @field_validator("telegram_bot_token")
+    @classmethod
+    def require_bot_token_format(cls, value: SecretStr) -> SecretStr:
+        token = value.get_secret_value()
+        if token and not re.fullmatch(r"[0-9]+:[A-Za-z0-9_-]+", token):
+            raise ValueError("Telegram bot token has an invalid format.")
+        return value
+
+    @field_validator("telegram_channel_username")
+    @classmethod
+    def require_channel_username(cls, value: str) -> str:
+        if not value:
+            return value
+        value = value.removeprefix("@").lower()
+        if not re.fullmatch(r"[a-z][a-z0-9_]{4,31}", value):
+            raise ValueError("Use a public Telegram channel username without a URL.")
+        return value
+
+    @field_validator("telegram_channel_id")
+    @classmethod
+    def require_channel_id(cls, value: str) -> str:
+        if value and not re.fullmatch(r"-100[0-9]+", value):
+            raise ValueError("An optional Telegram channel ID must use the -100 numeric format.")
+        return value
 
     @field_validator("mastodon_base_url", "bluesky_pds_url")
     @classmethod

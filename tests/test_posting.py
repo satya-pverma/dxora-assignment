@@ -229,6 +229,10 @@ def test_default_registry_returns_honest_failures_for_all_five_platforms():
         bluesky_app_password="",
         wordpress_site_id="",
         wordpress_access_token="",
+        tumblr_blog_identifier="",
+        tumblr_access_token="",
+        telegram_bot_token="",
+        telegram_channel_username="",
     )
     response = asyncio.run(
         PostingService(build_adapters(list(PUBLISHING_PLATFORMS), settings)).post(
@@ -239,8 +243,7 @@ def test_default_registry_returns_honest_failures_for_all_five_platforms():
     assert len(response.results) == 5
     assert all(result.status == "failed" for result in response.results)
     assert all(result.posted_url is None for result in response.results)
-    assert all("not configured" in result.error for result in response.results[:3])
-    assert all("not implemented" in result.error for result in response.results[3:])
+    assert all("not configured" in result.error for result in response.results)
 
 
 def test_unknown_adapter_error_codes_are_sanitized():

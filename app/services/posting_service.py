@@ -8,7 +8,6 @@ from app.platforms.base import PUBLISHING_PLATFORMS, PlatformAdapter, PlatformEr
 from app.schemas import PostingRequest, PostingResponse, PostingResult
 
 ERROR_MESSAGES = {
-    "integration_unavailable": "This platform integration is not implemented yet.",
     "missing_credentials": "Platform credentials are not configured on the server.",
     "authentication_failed": "The platform rejected the configured credentials.",
     "permission_denied": "The account does not have permission to publish here.",

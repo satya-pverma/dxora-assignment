@@ -6,9 +6,9 @@ Python/FastAPI implementation of the two practical tests published in
 ## Status
 
 The FastAPI foundation, website extraction service, `/link-analysis`, and
-`/posting` orchestration are implemented, with Mastodon, Bluesky, and WordPress.com
-publishing adapters. Tumblr and Telegram remain unimplemented. No live publishing
-has been demonstrated; missing credentials produce explicit failures.
+`/posting` orchestration are implemented, with Mastodon, Bluesky, WordPress.com,
+Tumblr, and Telegram publishing adapters. No live publishing has been demonstrated;
+missing credentials produce explicit failures.
 
 ## Setup
 
@@ -58,9 +58,8 @@ Platform selection belongs to the server. `POSTING_PLATFORMS` is a nonempty JSON
 array of unique names from `mastodon`, `bluesky`, `wordpress`, `tumblr`, and
 `telegram`; the default selects all five. `POSTING_TIMEOUT_SECONDS` defaults to
 15 and must be greater than zero and at most 60. Restart after changing `.env`.
-With the example environment's empty credentials, Mastodon, Bluesky, and WordPress
-return `Platform credentials are not configured on the server.` Tumblr and
-Telegram return `This platform integration is not implemented yet.` Configuring
+With the example environment's empty credentials, all five platforms return
+`Platform credentials are not configured on the server.` Configuring
 credentials enables real publication when `/posting` is called; starting the
 server or running the tests does not publish messages.
 
@@ -124,6 +123,50 @@ not a guarantee of future visibility or indexing in search engines.
 Adapter references: [Mastodon](https://docs.joinmastodon.org/methods/statuses/#create),
 [Bluesky](https://docs.bsky.app/docs/tutorials/creating-a-post),
 [WordPress.com](https://developer.wordpress.com/docs/api/1.1/post/sites/$site/posts/new/).
+
+### Tumblr and Telegram adapters
+
+| Adapter | Required configuration | Prerequisites |
+| --- | --- | --- |
+| Tumblr | `TUMBLR_BLOG_IDENTIFIER`, `TUMBLR_ACCESS_TOKEN` | Public Tumblr blog and current OAuth2 user token with `write` scope |
+| Telegram | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHANNEL_USERNAME` | Public channel and a bot with administrator posting permission |
+
+Tumblr accepts a blog name or `name.tumblr.com`, publishes an NPF text block with
+explicit CTA formatting, and checks its canonical permalink and message without
+authentication. Formatting offsets count Unicode code points. The returned ID
+must be a positive unsigned 64-bit decimal string. Its response lacks a publication
+timestamp, so the adapter records local UTC completion time. Custom blog domains
+and UUID identifiers are not supported by this implementation. Obtain OAuth tokens
+outside this application and renew them manually; token acquisition/refresh is not
+implemented. Redirects, login challenges, larger themes, compression, or missing
+canonical markup can cause a public page to remain unverified.
+
+Telegram accepts a public channel username with or without `@`. Optionally set
+`TELEGRAM_CHANNEL_ID` to the channel's `-100...` numeric ID. Before sending, it
+calls `getChat` and requires the expected channel type, public username, and
+configured ID (if supplied). It sends plain text once, without Markdown/HTML
+interpretation or paid broadcasting. The response must identify the same channel,
+message text, positive message ID, and a valid Unix timestamp. An anonymous `t.me`
+embed check verifies the exact channel/message widget and text. Private chats and
+groups are rejected by the preflight. No permissions are granted by the application.
+
+Telegram requires its bot token in the transport path. The application inserts
+that path beneath HTTPX's normal request logging, which sees only `botredacted`;
+transport errors are sanitized. Do not enable external wire/body tracing or record
+credentials in screenshots. The visibility check carries no bot token. The shared
+public-address pinning, response bounds, no-redirect policy, and separate visibility
+deadline also apply to both adapters.
+
+References: [Tumblr API](https://github.com/tumblr/docs/blob/master/api.md),
+[NPF formatting](https://github.com/tumblr/docs/blob/master/npf-spec.md),
+[Telegram Bot API](https://core.telegram.org/bots/api#sendmessage),
+[public message links](https://core.telegram.org/api/links#public-message-links).
+
+This milestone adds mocked Tumblr/Telegram and five-platform partial-failure
+coverage. Local Windows verification with Python 3.13.17 passed all 196 tests and
+Ruff. The run emitted one Starlette TestClient deprecation warning concerning
+HTTPX. Compilation, OpenAPI generation, and local documentation links also passed.
+No live publication, OAuth login, or permission changes were performed.
 
 Posting milestone validation reported from the local Windows terminal with
 Python 3.13.17: all 119 tests passed and Ruff reported all checks passed. The run
@@ -253,14 +296,14 @@ The foundation is published on `main`. The remote is configured as
 `https://github.com/satya-pverma/dxora-assignment.git`.
 
 Each subsequent milestone uses a separate branch and pull request. Once the
-working changes are on `feat/first-three-platforms`, review and publish them:
+working changes are on `feat/tumblr-telegram`, review and publish them:
 
 ```powershell
-git add .env.example README.md docs app tests/test_posting.py tests/test_platform_adapters.py
-git commit -m "feat: integrate Mastodon Bluesky and WordPress publishing"
-git push -u origin feat/first-three-platforms
+git add .env.example README.md docs app tests/test_posting.py tests/test_remaining_adapters.py
+git commit -m "feat: integrate Tumblr and Telegram publishing"
+git push -u origin feat/tumblr-telegram
 ```
 
-Then open a pull request from `feat/first-three-platforms` into `main` in your own
+Then open a pull request from `feat/tumblr-telegram` into `main` in your own
 repository. Review the changes and CI results before merging. Create the next
 feature branch from the updated `main` after merging.

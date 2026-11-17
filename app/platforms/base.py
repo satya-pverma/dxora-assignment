@@ -61,13 +61,3 @@ class PlatformAdapter(ABC):
     async def verify_public(self, post: PublishedPost, message: str, cta_url: str) -> bool:
         """Verify anonymously after confirmation; the default preserves the adapter result."""
         return post.public_access
-
-
-class UnavailableAdapter(PlatformAdapter):
-    """An honest failure until a real adapter is implemented and configured."""
-
-    def __init__(self, name: PublishingPlatform) -> None:
-        self.name = name
-
-    async def publish(self, message: str, cta_url: str) -> PublishedPost:
-        raise PlatformError("integration_unavailable")

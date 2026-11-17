@@ -38,13 +38,21 @@ integrations; this is not completion of the five live integrations. Local Window
 verification with Python 3.13.17 passed all 119 tests and Ruff. Compilation,
 OpenAPI generation, and local documentation links also passed.
 
-The current milestone implements Mastodon, Bluesky, and WordPress.com adapters,
+The merged milestone implements Mastodon, Bluesky, and WordPress.com adapters,
 bounded/pinned HTTP requests, credential configuration, UTF-8 CTA facets, escaped
 HTML, anonymous public checks, and mocked integration tests. Confirmed post URLs
 survive visibility failures. Local Windows verification with Python 3.13.17 passed
 all 150 tests and Ruff. Compilation, OpenAPI generation, and local documentation
-links also passed. Live publication and account access remain unverified. Tumblr
-and Telegram follow in the next PR.
+links also passed. Live publication and account access remain unverified.
+
+The current milestone adds Tumblr NPF and Telegram public-channel publishing,
+credential validation, anonymous visibility checks, Telegram token-safe transport,
+and mocked five-platform partial-failure coverage. All five registry entries now
+use real adapters; no credentials means five explicit configuration failures.
+Local Windows verification with Python 3.13.17 passed all 196 tests and Ruff.
+Compilation, OpenAPI generation, and local documentation links also passed.
+Live account access/publication, model benchmarks, and final demonstration evidence remain
+outstanding. Documentation and submission verification follow this PR.
 
 1. Establish this repository and record the implementation plan.
 2. PR: FastAPI foundation, environment configuration, tests, and CI.

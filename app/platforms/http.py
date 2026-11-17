@@ -13,6 +13,31 @@ from app.utils.validators import Resolver, WebsiteError, resolve_addresses, vali
 DATE_ADAPTER = TypeAdapter(datetime)
 
 
+class SecretPathTransport(httpx.AsyncBaseTransport):
+    """Insert Telegram's secret path below HTTPX's request logging layer."""
+
+    def __init__(self, inner: httpx.AsyncBaseTransport, path: str) -> None:
+        self.inner = inner
+        self.path = path
+
+    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+        actual = httpx.Request(
+            request.method,
+            request.url.copy_with(path=self.path),
+            headers=request.headers,
+            stream=request.stream,
+            extensions=request.extensions,
+        )
+        try:
+            return await self.inner.handle_async_request(actual)
+        except Exception:
+            # Do not expose exceptions carrying the actual secret-bearing request URL.
+            raise httpx.TransportError("The platform transport failed.") from None
+
+    async def aclose(self) -> None:
+        await self.inner.aclose()
+
+
 def require_text(data: dict, key: str) -> str:
     value = data.get(key)
     if not isinstance(value, str) or not value.strip():
@@ -56,7 +81,9 @@ class PlatformHTTP:
         token: str | None = None,
         payload: dict | None = None,
         publishing: bool = False,
-    ) -> dict:
+        secret_path: str | None = None,
+        as_html: bool = False,
+    ) -> dict | str:
         try:
             destination = await validate_destination(url, self.resolver)
             if destination.url.scheme != "https":
@@ -69,11 +96,23 @@ class PlatformHTTP:
             }
             if token:
                 headers["Authorization"] = f"Bearer {token}"
+            transport = self.transport
+            if secret_path is not None:
+                if destination.url.host != "api.telegram.org" or destination.url.path not in {
+                    "/botredacted/getChat",
+                    "/botredacted/sendMessage",
+                }:
+                    raise PlatformError("invalid_configuration")
+                transport = SecretPathTransport(
+                    transport or httpx.AsyncHTTPTransport(trust_env=False), secret_path
+                )
+            if as_html:
+                headers["Accept"] = "text/html"
             async with httpx.AsyncClient(
                 timeout=self.timeout_seconds,
                 trust_env=False,
                 follow_redirects=False,
-                transport=self.transport,
+                transport=transport,
                 limits=httpx.Limits(max_keepalive_connections=0),
             ) as client:
                 async with client.stream(
@@ -94,11 +133,17 @@ class PlatformHTTP:
                         raise PlatformError("outcome_uncertain" if publishing else "provider_error")
                     if response.headers.get("content-encoding", "identity").lower() != "identity":
                         raise PlatformError("invalid_response")
+                    if as_html:
+                        media_type = response.headers.get("content-type", "").split(";", 1)[0]
+                        if media_type.strip().lower() not in {"text/html", "application/xhtml+xml"}:
+                            raise PlatformError("invalid_response")
                     body = bytearray()
                     async for chunk in response.aiter_bytes():
                         if len(body) + len(chunk) > 256_000:
                             raise PlatformError("invalid_response")
                         body.extend(chunk)
+            if as_html:
+                return body.decode("utf-8", errors="replace")
             result = json.loads(body)
             if not isinstance(result, dict):
                 raise ValueError
@@ -118,3 +163,9 @@ class PlatformHTTP:
             if publishing and exc.code == "invalid_response":
                 raise PlatformError("outcome_uncertain") from exc
             raise
+
+    async def get_html(self, url: str) -> str:
+        result = await self.request("GET", url, as_html=True)
+        if not isinstance(result, str):
+            raise PlatformError("invalid_response")
+        return result
