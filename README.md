@@ -10,6 +10,8 @@ Project foundation only. The analysis and posting endpoints are not implemented 
 ## Setup
 
 Requires Python 3.11 or later.
+Use a Python installation permitted by your machine's application policy.
+If `python` is unavailable, replace it below with your approved interpreter path.
 
 ```powershell
 python -m venv .venv
@@ -37,3 +39,19 @@ All development branches and pull requests target this repository. No writes or
 pull requests will be made to the assignment's source repository.
 
 Never commit API keys, account tokens, or unsanitized demonstration logs.
+
+## Manual GitHub workflow
+
+The local repository has a planning commit on `main` and a foundation commit on
+`chore/project-foundation`. The remote is already configured as
+`https://github.com/satya-pverma/dxora-assignment.git`.
+
+For the empty remote repository, publish both branches:
+
+```powershell
+git push -u origin main
+git push -u origin chore/project-foundation
+```
+
+Then open a pull request from `chore/project-foundation` into `main` in your own
+repository. Review the changes and CI results before merging.
