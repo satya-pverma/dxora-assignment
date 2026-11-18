@@ -1,6 +1,7 @@
 """Concurrent posting with isolated failures and no implicit publication retries."""
 
 import asyncio
+import logging
 from collections.abc import Sequence
 from datetime import timezone
 
@@ -20,11 +21,25 @@ ERROR_MESSAGES = {
         "Tumblr token storage is unavailable; check MongoDB and encryption settings."
     ),
     "token_refresh_busy": "Tumblr token refresh is in progress. Try again shortly.",
+    "token_encryption_mismatch": (
+        "Stored Tumblr tokens cannot be decrypted. Use the same encryption key as initialization."
+    ),
+    "token_database_auth_failed": "MongoDB rejected the database username or password.",
+    "token_database_permission_denied": (
+        "MongoDB user lacks access to the token database or collection."
+    ),
+    "token_database_unreachable": (
+        "MongoDB could not be reached. Check Atlas Network Access, DNS and cluster availability."
+    ),
+    "token_storage_configuration_invalid": (
+        "MongoDB URI or token encryption configuration is invalid."
+    ),
     "token_refresh_reauthorization_required": (
         "Tumblr token renewal could not be confirmed. Reauthorize and reseed its stored tokens."
     ),
 }
 TIMEOUT_MESSAGE = "Posting timed out; publication may have occurred. Verify before retrying."
+logger = logging.getLogger(__name__)
 
 
 class PostingService:
@@ -76,8 +91,12 @@ class PostingService:
             message = TIMEOUT_MESSAGE
         except PlatformError as exc:
             message = ERROR_MESSAGES.get(exc.code, "Publishing failed for this platform.")
-        except Exception:
+        except Exception as exc:
             # Do not return raw exceptions: HTTP errors can contain tokens or response bodies.
+            logger.error(
+                "Unexpected publication failure platform=%s exception_type=%s",
+                adapter.name, type(exc).__name__,
+            )
             message = "Publication could not be confirmed; verify before retrying."
         return PostingResult(
             platform=adapter.name,

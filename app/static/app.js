@@ -153,7 +153,7 @@ function renderPosting(data) {
   data.results.forEach(result => {
     const card = node('article', undefined, 'card');
     card.append(node('h3', readable(result.platform)), node('span', readable(result.status), result.status === 'success' ? 'tag success' : 'tag error'));
-    if (result.error) card.append(node('p', result.error, 'error'));
+    if (result.status !== 'success' && result.error) card.append(node('p', result.error, 'error'));
     if (result.posted_url) {
       const link = safeLink(result.posted_url);
       if (link) { const paragraph = node('p'); paragraph.append(link); card.append(paragraph); }
