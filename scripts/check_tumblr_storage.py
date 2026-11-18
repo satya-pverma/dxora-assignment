@@ -4,6 +4,7 @@ from app.config import Settings
 from app.platforms.base import PlatformError
 from app.services.posting_service import ERROR_MESSAGES
 from app.services.tumblr_tokens import (
+    REFRESH_FAILURES,
     TumblrTokenStore,
     require_refresh_config,
     storage_error_code,
@@ -29,6 +30,8 @@ def main():
                 record["state"] if record.get("state") in {"ready", "refreshing", "reauthorize"}
                 else "invalid"
             ))
+            if record.get("last_error") in REFRESH_FAILURES:
+                print("Last renewal failure: " + ERROR_MESSAGES[record["last_error"]])
             return 0 if record.get("state") == "ready" else 1
     except Exception as exc:
         code = exc.code if isinstance(exc, PlatformError) else storage_error_code(exc)

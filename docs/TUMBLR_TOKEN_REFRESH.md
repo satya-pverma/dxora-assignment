@@ -67,6 +67,10 @@ On a host with Python on PATH, use `python -m scripts.check_tumblr_storage`.
 It does not seed, refresh, publish or print secrets. A successful local check does
 not prove Render is allowed by Atlas Network Access. Use the same encryption key,
 database, collection and app/blog identity wherever sharing one record.
+New refresh failures retain an allowlisted `last_error` category in the record;
+the diagnostic shows it without exposing token values or upstream error descriptions.
+Older failed records have no saved reason. Initialization/decryption checks do not
+test OAuth client credentials, and initialization deliberately forces first-use refresh.
 
 An atomic compare-and-set claim prevents concurrent workers refreshing the same
 token. Other requests wait briefly or return a busy error. Database/encryption

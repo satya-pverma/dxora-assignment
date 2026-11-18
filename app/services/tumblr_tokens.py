@@ -6,6 +6,7 @@ OAuth result, reauthorization is safer than replaying a possibly consumed token.
 
 import asyncio
 import json
+import logging
 import time
 from contextlib import contextmanager
 
@@ -23,6 +24,13 @@ from pymongo.write_concern import WriteConcern
 
 from app.config import Settings
 from app.platforms.base import PlatformError
+
+logger = logging.getLogger(__name__)
+REFRESH_FAILURES = {
+    "token_refresh_client_rejected", "token_refresh_grant_rejected",
+    "token_refresh_network_failed", "token_refresh_response_invalid",
+    "token_refresh_failed", "token_storage_unavailable",
+}
 
 
 @contextmanager
@@ -55,14 +63,26 @@ def refresh_tumblr(settings: Settings, refresh_token: str) -> dict:
                   "client_id": settings.tumblr_client_id,
                   "client_secret": settings.tumblr_client_secret.get_secret_value()},
         ) as response:
-            if response.status_code != 200:
-                raise PlatformError("token_refresh_failed")
             body = bytearray()
             for chunk in response.iter_bytes():
                 if len(body) + len(chunk) > 16384:
                     raise PlatformError("token_refresh_failed")
                 body.extend(chunk)
-    return json.loads(body)
+            if response.status_code != 200:
+                logger.error("Tumblr refresh endpoint HTTP status=%s", response.status_code)
+                try:
+                    error = json.loads(body).get("error")
+                except (ValueError, AttributeError):
+                    error = None
+                code = {
+                    "invalid_client": "token_refresh_client_rejected",
+                    "invalid_grant": "token_refresh_grant_rejected",
+                }.get(error) if isinstance(error, str) else None
+                raise PlatformError(code or "token_refresh_failed")
+    try:
+        return json.loads(body)
+    except ValueError:
+        raise PlatformError("token_refresh_response_invalid") from None
 
 
 class TumblrTokenStore:
@@ -110,7 +130,11 @@ class TumblrTokenStore:
                 time.sleep(0.2)
                 continue
             if state != "ready":
-                raise PlatformError("token_refresh_reauthorization_required")
+                failure = record.get("last_error")
+                raise PlatformError(
+                    failure if failure in REFRESH_FAILURES
+                    else "token_refresh_reauthorization_required"
+                )
             if record["expires_at"] > self.clock() + 90:
                 return self.cipher.decrypt(record["access_token"].encode()).decode()
             # A configuration/key error must not poison an otherwise valid record.
@@ -131,7 +155,8 @@ class TumblrTokenStore:
                     or type(tokens.get("expires_in")) is not int
                     or not 90 < tokens["expires_in"] <= 31536000
                 ):
-                    raise PlatformError("token_refresh_failed")
+                    logger.error("Tumblr refresh response missing valid tokens or lifetime")
+                    raise PlatformError("token_refresh_response_invalid")
                 # Persist both replacements before allowing publication.
                 saved = self.collection.update_one(
                     {"_id": self.record_id, "version": record["version"], "state": "refreshing"},
@@ -139,22 +164,33 @@ class TumblrTokenStore:
                         "access_token": self.encrypt(tokens["access_token"]),
                         "refresh_token": self.encrypt(tokens["refresh_token"]),
                         "expires_at": self.clock() + tokens["expires_in"], "state": "ready",
-                    }, "$inc": {"version": 1}, "$unset": {"refresh_started": ""}},
+                    }, "$inc": {"version": 1},
+                     "$unset": {"refresh_started": "", "last_error": ""}},
                 )
                 if not saved.modified_count:
                     raise PlatformError("token_storage_unavailable")
                 return tokens["access_token"]
-            except Exception:
+            except Exception as exc:
+                if isinstance(exc, httpx.TransportError):
+                    failure = "token_refresh_network_failed"
+                elif isinstance(exc, PyMongoError):
+                    failure = "token_storage_unavailable"
+                elif isinstance(exc, PlatformError) and exc.code in REFRESH_FAILURES:
+                    failure = exc.code
+                else:
+                    failure = "token_refresh_response_invalid"
+                logger.error("Tumblr renewal failed category=%s", failure)
                 # Never silently revert to stale environment credentials or replay
                 # an old refresh token after an ambiguous refresh/persistence result.
                 try:
                     self.collection.update_one(
                         {"_id": self.record_id, "version": record["version"],
-                         "state": "refreshing"}, {"$set": {"state": "reauthorize"}},
+                         "state": "refreshing"},
+                        {"$set": {"state": "reauthorize", "last_error": failure}},
                     )
                 except PyMongoError:
                     pass
-                raise PlatformError("token_refresh_reauthorization_required") from None
+                raise PlatformError(failure) from None
         raise PlatformError("token_refresh_busy")
 
 

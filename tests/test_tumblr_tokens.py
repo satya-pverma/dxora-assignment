@@ -132,9 +132,37 @@ def test_uncertain_rotation_does_not_replay_old_tokens(settings, failure):
     for _ in range(2):
         with pytest.raises(PlatformError) as error:
             store.get_token()
-        assert error.value.code == "token_refresh_reauthorization_required"
+        assert error.value.code == "token_refresh_response_invalid"
         assert "private response" not in str(error.value)
     assert len(calls) == 1
+
+
+@pytest.mark.parametrize(("oauth_error", "expected"), [
+    ("invalid_client", "token_refresh_client_rejected"),
+    ("invalid_grant", "token_refresh_grant_rejected"),
+])
+def test_refresh_reports_allowlisted_oauth_failure(settings, monkeypatch, oauth_error, expected):
+    original_client = httpx.Client
+
+    def handler(request):
+        return httpx.Response(400, json={
+            "error": oauth_error, "error_description": "private-upstream-value",
+        })
+
+    monkeypatch.setattr(
+        "app.services.tumblr_tokens.httpx.Client",
+        lambda **kwargs: original_client(**kwargs, transport=httpx.MockTransport(handler)),
+    )
+    collection = Collection()
+    store = TumblrTokenStore(settings, collection)
+    with pytest.raises(PlatformError) as error:
+        store.get_token()
+    assert error.value.code == expected
+    assert collection.doc["last_error"] == expected
+    assert "private-upstream-value" not in repr(collection.doc)
+    with pytest.raises(PlatformError) as blocked:
+        store.get_token()
+    assert blocked.value.code == expected
 
 
 def test_abandoned_refresh_is_not_stolen(settings):
