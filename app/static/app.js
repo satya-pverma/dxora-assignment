@@ -196,5 +196,50 @@ $('message').addEventListener('input', () => {
   $('message').setCustomValidity(length > 200 ? 'Use at most 200 characters.' : '');
 });
 $('posting-form').addEventListener('submit', event => {
-  event.preventDefault(); submit(event.currentTarget, '/posting', {message: $('message').value}, 'posting', renderPosting);
+  event.preventDefault();
+  const platforms = Array.from(document.querySelectorAll('#platform-options input:checked')).map(input => input.value);
+  if (!platforms.length) {
+    $('posting-status').textContent = 'Select at least one available platform.';
+    $('posting-status').className = 'status error';
+    return;
+  }
+  const picker = document.querySelector('.platform-picker');
+  picker.disabled = true;
+  submit(event.currentTarget, '/dashboard/posting', {message: $('message').value, platforms}, 'posting', renderPosting)
+    .finally(() => { picker.disabled = false; });
 });
+
+async function loadPlatforms() {
+  const root = $('platform-options');
+  $('confirm-publish').checked = false;
+  root.textContent = 'Loading platforms...';
+  root.setAttribute('aria-busy', 'true');
+  $('refresh-platforms').disabled = true;
+  const labels = {mastodon: 'Mastodon', bluesky: 'Bluesky', wordpress: 'WordPress.com', tumblr: 'Tumblr', telegram: 'Telegram'};
+  try {
+    const response = await fetch('/dashboard/platforms');
+    if (!response.ok) throw new Error('Could not load platforms. Please refresh.');
+    const data = await response.json();
+    root.replaceChildren();
+    const updateSelection = () => {
+      const count = root.querySelectorAll('input:checked').length;
+      $('platform-selection-count').textContent = count ? `${count} selected` : 'No destinations selected';
+    };
+    data.platforms.forEach(item => {
+      const label = node('label', undefined, 'platform-option');
+      const input = node('input'); input.type = 'checkbox'; input.value = item.platform;
+      input.disabled = !item.available;
+      label.dataset.available = String(item.available);
+      input.addEventListener('change', () => { $('confirm-publish').checked = false; updateSelection(); });
+      const mark = node('span', {mastodon:'m', bluesky:'B', wordpress:'W', tumblr:'t', telegram:'T'}[item.platform], 'platform-mark');
+      mark.setAttribute('aria-hidden', 'true');
+      const text = node('span', undefined, 'platform-info');
+      text.append(node('strong', labels[item.platform] || item.platform), node('small', item.available ? 'Configured' : item.reason));
+      label.append(mark, text, input); root.append(label);
+    });
+    updateSelection();
+  } catch (error) { root.textContent = error.message; }
+  finally { $('refresh-platforms').disabled = false; root.setAttribute('aria-busy', 'false'); }
+}
+$('refresh-platforms').addEventListener('click', loadPlatforms);
+loadPlatforms();

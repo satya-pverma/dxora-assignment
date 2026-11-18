@@ -180,6 +180,17 @@ class PostingResult(StrictModel):
     error: str | None
 
 
+class DashboardPostingRequest(PostingRequest):
+    platforms: list[PublishingPlatform] = Field(min_length=1, max_length=5)
+
+    @field_validator("platforms")
+    @classmethod
+    def unique_platforms(cls, value: list[PublishingPlatform]) -> list[PublishingPlatform]:
+        if len(value) != len(set(value)):
+            raise ValueError("Select each platform only once.")
+        return value
+
+
 class PostingResponse(StrictModel):
     success: bool
     results: list[PostingResult]

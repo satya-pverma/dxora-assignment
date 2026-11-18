@@ -25,7 +25,9 @@ def test_forms_offer_both_flows_and_explicit_publication_confirmation():
     assert page.select_one("#posting-form textarea[required]")
     assert page.select_one("#confirm-publish[type=checkbox][required]")
     assert page.select_one("#demo-key[type=password]")
-    assert len(page.select("[role=status]")) == 2
+    assert page.select_one("#analysis-status[role=status]")
+    assert page.select_one("#posting-status[role=status]")
+    assert page.select_one("#platform-selection-count[role=status]")
 
 
 def test_access_key_comparison(monkeypatch):

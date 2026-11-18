@@ -73,6 +73,16 @@ class PublicDestination:
         return self.url.copy_with(host=self.address)
 
 
+def select_public_address(addresses: list[str]) -> str:
+    # Validate all answers before selection; a private result must never be ignored.
+    if not addresses or not all(is_public_address(address) for address in addresses):
+        raise WebsiteError(
+            "blocked_destination", "Only publicly routable website addresses are allowed."
+        )
+    # A pinned connection cannot use the HTTP client's normal dual-stack race.
+    return next((address for address in addresses if ":" not in address), addresses[0])
+
+
 async def validate_destination(
     value: str, resolver: Resolver = resolve_addresses
 ) -> PublicDestination:
@@ -86,9 +96,4 @@ async def validate_destination(
             raise WebsiteError("dns_error", "The website hostname could not be resolved.") from exc
     else:
         addresses = [str(literal)]
-    # Reject mixed public/private answers rather than choosing only the public one.
-    if not addresses or not all(is_public_address(address) for address in addresses):
-        raise WebsiteError(
-            "blocked_destination", "Only publicly routable website addresses are allowed."
-        )
-    return PublicDestination(url=url, address=addresses[0])
+    return PublicDestination(url=url, address=select_public_address(addresses))

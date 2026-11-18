@@ -9,6 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from app.config import get_settings
 from app.platforms.registry import build_adapters
 from app.schemas import (
+    DashboardPostingRequest,
     ErrorResponse,
     LinkAnalysisRequest,
     LinkAnalysisResponse,
@@ -18,6 +19,7 @@ from app.schemas import (
 from app.services.analysis_service import AnalysisService
 from app.services.llm_factory import build_llm_service
 from app.services.llm_service import LLMError
+from app.services.platform_selection import platform_options
 from app.services.posting_service import PostingService
 from app.services.rate_limiter import AnalysisRateLimiter, AnalysisRateLimitError
 from app.services.website_extractor import WebsiteExtractor
@@ -122,3 +124,25 @@ async def posting(
     service: Annotated[PostingService, Depends(get_posting_service)],
 ) -> PostingResponse:
     return await service.post(body)
+
+
+@app.get("/dashboard/platforms", tags=["dashboard"])
+def dashboard_platforms() -> dict:
+    return {"platforms": platform_options(get_settings())}
+
+
+@app.post(
+    "/dashboard/posting",
+    response_model=PostingResponse,
+    tags=["dashboard"],
+    dependencies=[Depends(require_demo_access)],
+)
+async def dashboard_posting(body: DashboardPostingRequest) -> PostingResponse:
+    settings = get_settings()
+    available = {item["platform"] for item in platform_options(settings) if item["available"]}
+    if not set(body.platforms) <= available:
+        raise HTTPException(400, "A selected platform is unavailable. Refresh the platform list.")
+    service = PostingService(
+        build_adapters(body.platforms, settings), settings.posting_timeout_seconds
+    )
+    return await service.post(PostingRequest(message=body.message))
