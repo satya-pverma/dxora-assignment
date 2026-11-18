@@ -174,6 +174,24 @@ def test_abandoned_refresh_is_not_stolen(settings):
         store.get_token()
 
 
+def test_connect_timeout_keeps_refresh_token_retryable(settings):
+    collection = Collection()
+    calls = []
+
+    def refresh(token):
+        calls.append(token)
+        if len(calls) == 1:
+            raise httpx.ConnectTimeout("private connection details")
+        return {"access_token": "new", "refresh_token": "rotated", "expires_in": 2520}
+
+    store = TumblrTokenStore(settings, collection, refresh)
+    with pytest.raises(PlatformError, match="token_refresh_network_failed"):
+        store.get_token()
+    assert collection.doc["state"] == "ready"
+    assert store.get_token() == "new"
+    assert calls == ["old-refresh", "old-refresh"]
+
+
 def test_wrong_encryption_key_does_not_claim_record(settings):
     collection = Collection()
     store = TumblrTokenStore(settings, collection)
