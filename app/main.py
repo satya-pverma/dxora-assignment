@@ -2,7 +2,7 @@ from pathlib import Path
 from secrets import compare_digest
 from typing import Annotated
 
-from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -19,10 +19,12 @@ from app.services.analysis_service import AnalysisService
 from app.services.llm_factory import build_llm_service
 from app.services.llm_service import LLMError
 from app.services.posting_service import PostingService
+from app.services.rate_limiter import AnalysisRateLimiter, AnalysisRateLimitError
 from app.services.website_extractor import WebsiteExtractor
 from app.utils.validators import WebsiteError
 
 app = FastAPI(title=get_settings().app_name)
+analysis_rate_limiter = AnalysisRateLimiter()
 STATIC_DIR = Path(__file__).parent / "static"
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
@@ -55,6 +57,23 @@ async def llm_error_handler(request, exc: LLMError) -> JSONResponse:
     )
 
 
+@app.exception_handler(AnalysisRateLimitError)
+async def analysis_rate_limit_handler(request, exc: AnalysisRateLimitError) -> JSONResponse:
+    return JSONResponse(
+        status_code=429,
+        headers={"Retry-After": str(exc.retry_after)},
+        content={
+            "success": False,
+            "error": {
+                "code": "analysis_rate_limited",
+                "message": (
+                    f"You can run 2 analyses per minute. Try again in {exc.retry_after} seconds."
+                ),
+            },
+        },
+    )
+
+
 @app.exception_handler(WebsiteError)
 async def website_error_handler(request, exc: WebsiteError) -> JSONResponse:
     if exc.code in {"invalid_url", "blocked_destination", "invalid_redirect", "unsafe_redirect"}:
@@ -74,12 +93,14 @@ async def website_error_handler(request, exc: WebsiteError) -> JSONResponse:
     response_model=LinkAnalysisResponse,
     tags=["analysis"],
     dependencies=[Depends(require_demo_access)],
-    responses={status: {"model": ErrorResponse} for status in (400, 502, 503, 504)},
+    responses={status: {"model": ErrorResponse} for status in (400, 429, 502, 503, 504)},
 )
 async def link_analysis(
     body: LinkAnalysisRequest,
+    request: Request,
     service: Annotated[AnalysisService, Depends(get_analysis_service)],
 ) -> LinkAnalysisResponse:
+    analysis_rate_limiter.consume(request.client.host if request.client else "unknown")
     return await service.analyze(body.url)
 
 
