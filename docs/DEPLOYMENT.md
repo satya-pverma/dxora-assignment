@@ -4,6 +4,19 @@ The same FastAPI service serves the browser UI at `/`, Swagger at `/docs`, and
 both JSON endpoints. There is no frontend build, second service, database, or
 browser-side provider key. Analysis and publishing run independently.
 
+`/link-analysis` allows two requests per client IP in a rolling 60-second window.
+Further requests return HTTP 429 and `Retry-After` seconds; the UI displays the
+wait time. Valid authorized attempts count even if a provider later fails.
+Invalid request bodies and rejected demo keys do not consume the analysis limit.
+Publishing and health checks are unaffected. Clients sharing an IP share a quota.
+
+The limiter is in memory: restart resets it. Run a single Uvicorn worker/instance
+with the supplied start command. Multiple workers/replicas require shared storage
+such as Redis for a consistent limit. The app uses the ASGI connection IP, not
+arbitrary forwarded headers. Behind a proxy, configure Uvicorn's trusted proxy IPs
+for that hosting environment to obtain the real client IP; otherwise clients may
+share the proxy's quota. Do not trust forwarded headers from arbitrary internet clients.
+
 ## Local review
 
 1. Run `python -m pytest` and `python -m ruff check .` using the virtual environment.
