@@ -21,6 +21,19 @@ ERROR_MESSAGES = {
         "Tumblr token storage is unavailable; check MongoDB and encryption settings."
     ),
     "token_refresh_busy": "Tumblr token refresh is in progress. Try again shortly.",
+    "token_refresh_client_rejected": (
+        "Tumblr rejected the refresh Client ID/Secret. Check Render's Consumer Key and Secret."
+    ),
+    "token_refresh_grant_rejected": (
+        "Tumblr rejected the refresh token. Reauthorize and reseed the matching app/blog record."
+    ),
+    "token_refresh_network_failed": (
+        "Tumblr renewal connection failed. Check Render logs; renewal is uncertain."
+    ),
+    "token_refresh_response_invalid": (
+        "Tumblr renewal returned an unexpected response. Check the safe renewal diagnostic."
+    ),
+    "token_refresh_failed": "Tumblr rejected token renewal. Check the safe renewal diagnostic.",
     "token_encryption_mismatch": (
         "Stored Tumblr tokens cannot be decrypted. Use the same encryption key as initialization."
     ),
