@@ -1,5 +1,6 @@
 import re
 from functools import lru_cache
+from typing import Literal
 
 from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -12,8 +13,14 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore", hide_input_in_errors=True)
 
     app_name: str = "Dxora Assignment"
+    demo_access_key: SecretStr = SecretStr("")
     openai_api_key: SecretStr = SecretStr("")
+    llm_provider: Literal["openai", "gemini"] = "openai"
     llm_model: str = Field(default="gpt-6-luna", min_length=1)
+    gemini_api_key: SecretStr = SecretStr("")
+    gemini_model: str = Field(
+        default="gemini-3.8-flash", min_length=1, max_length=128, pattern=r"^[A-Za-z0-9._-]+$"
+    )
     llm_timeout_seconds: float = Field(default=30, gt=0, le=120)
     llm_max_output_tokens: int = Field(default=6000, ge=1000, le=16000)
     posting_platforms: list[PublishingPlatform] = Field(

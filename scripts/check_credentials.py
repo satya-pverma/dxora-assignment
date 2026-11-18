@@ -7,7 +7,6 @@ from pydantic import SecretStr, ValidationError
 from app.config import Settings
 
 REQUIRED = {
-    "OpenAI": ("openai_api_key",),
     "Mastodon": ("mastodon_base_url", "mastodon_access_token"),
     "Bluesky": ("bluesky_pds_url", "bluesky_handle", "bluesky_app_password"),
     "WordPress.com": ("wordpress_site_id", "wordpress_access_token"),
@@ -30,7 +29,13 @@ def main() -> int:
             print("- " + ".".join(str(part) for part in error["loc"]).upper())
         return 2
     all_present = True
-    for service, fields in REQUIRED.items():
+    llm_required = (
+        {"Gemini": ("gemini_api_key",)}
+        if settings.llm_provider == "gemini"
+        else {"OpenAI": ("openai_api_key",)}
+    )
+    print(f"Selected analysis provider: {settings.llm_provider}")
+    for service, fields in (llm_required | REQUIRED).items():
         missing = []
         for field in fields:
             value = getattr(settings, field)
