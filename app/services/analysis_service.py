@@ -1,12 +1,12 @@
 import time
 
 from app.schemas import AnalysisMetadata, LinkAnalysisResponse
-from app.services.llm_service import LLMError, LLMService
+from app.services.llm_service import AnalysisLLM, LLMError
 from app.services.website_extractor import WebsiteExtractor
 
 
 class AnalysisService:
-    def __init__(self, extractor: WebsiteExtractor, llm: LLMService) -> None:
+    def __init__(self, extractor: WebsiteExtractor, llm: AnalysisLLM) -> None:
         self.extractor = extractor
         self.llm = llm
 
@@ -36,8 +36,8 @@ class AnalysisService:
             **result.model_dump(),
             website=website.requested_url,
             metadata=AnalysisMetadata(
-                provider="openai",
-                model=self.llm.settings.llm_model,
+                provider=self.llm.provider,
+                model=self.llm.model,
                 source_url=website.final_url,
                 content_truncated=website.truncated,
                 input_tokens=usage["input_tokens"],

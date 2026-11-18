@@ -128,7 +128,7 @@ class ModelAnalysis(StrictModel):
 
 
 class AnalysisMetadata(StrictModel):
-    provider: Literal["openai"]
+    provider: Literal["openai", "gemini"]
     model: str
     source_url: str
     content_truncated: bool

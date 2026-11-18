@@ -187,11 +187,39 @@ the remaining live checks.
 
 ## Website analysis API
 
-Set `OPENAI_API_KEY` in your ignored local `.env`. The server uses the OpenAI
-Responses API with `LLM_MODEL=gpt-6-luna` by default. No key is required for
-health checks or mocked tests. Restart the server after changing configuration.
-Only the OpenAI adapter is implemented; alternative providers in the research
-document are not automatic fallbacks.
+## Browser workspace and hosting
+
+Restart the server and open http://localhost:4000 for website analysis and publishing
+forms, readable results, and full JSON responses. Publishing requires confirmation
+and uses the platform credentials configured on the server.
+
+See [deployment instructions](docs/DEPLOYMENT.md) for a single Render Free service
+hosting the UI and API. `render.yaml` includes the configuration. Set
+`DEMO_ACCESS_KEY` on the hosted service and enter it under **Demo access** in the UI.
+Direct API clients send this value in the `X-Demo-Key` header. Local access remains
+open when the setting is empty. Provider credentials never go in the browser.
+
+### Analysis configuration
+
+## Browser UI and deployment
+
+Open `/` for the analysis and publishing dashboard. Both flows use the existing
+API, and provider credentials stay on the server. See
+[local review and free Render deployment](docs/DEPLOYMENT.md).
+
+### Analysis configuration
+
+Select a provider in your ignored local `.env`. For Gemini, set
+`LLM_PROVIDER=gemini`, `GEMINI_API_KEY` and `GEMINI_MODEL=gemini-3.8-flash`.
+For OpenAI (the default), set `LLM_PROVIDER=openai`, `OPENAI_API_KEY` and
+`LLM_MODEL=gpt-6-luna`. Both adapters use the same validated analysis contract.
+Restart the server after changing configuration. No key is required for health
+checks or mocked tests. There is no automatic provider fallback.
+
+Run `python -m scripts.list_gemini_models` to list model IDs available to your key
+without generating content. Model availability does not guarantee free quota;
+check your project's AI Studio Rate Limit page before testing. Gemini free tier
+requests may be used to improve Google products; use public website content.
 
 ```powershell
 Invoke-RestMethod -Method Post -Uri http://localhost:4000/link-analysis `
@@ -227,6 +255,14 @@ it does not prove that every model interpretation is correct.
 Service errors use `{"success":false,"error":{"code":"...","message":"..."}}`.
 Request validation uses FastAPI's standard `detail` array. Upstream error bodies
 and credentials are not returned to the caller.
+
+OpenAI HTTP 429 responses are classified using bounded, allowlisted error codes.
+`llm_quota_exceeded` means API quota/credits or usage limits need checking;
+`llm_credit_balance_exhausted` identifies exhausted prepaid credits. Separate codes
+identify project/organization spend limits and organization usage limits.
+`llm_rate_limited` covers transient or unclassified limits. Do not repeatedly
+retry a billing/quota error; inspect the API organization's billing and limits.
+These errors retain HTTP 503 and never expose the provider's raw account message.
 
 `LLM_TIMEOUT_SECONDS` defaults to 30 (allowed range: greater than zero through
 120). `LLM_MAX_OUTPUT_TOKENS` defaults to 6000 (allowed range: 1000–16000).
@@ -264,7 +300,7 @@ reasoning, for a real bill. Tokenizers differ.
 Expected model response target is 5–20 seconds, with a separate ten-second website
 fetch budget; these are unmeasured targets, not benchmarks or SLAs. Recommended
 configured alternative: Gemini Flash if the baseline fails quality evaluation.
-Only OpenAI is implemented; automatic fallback is not. Clean and bound content,
+OpenAI and Gemini are implemented; automatic fallback is not. Clean and bound content,
 remove duplicate boilerplate, and request all sections together to control cost.
 Caching and cross-model evaluations remain future work.
 

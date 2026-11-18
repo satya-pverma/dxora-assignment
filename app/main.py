@@ -1,7 +1,10 @@
+from pathlib import Path
+from secrets import compare_digest
 from typing import Annotated
 
-from fastapi import Depends, FastAPI
-from fastapi.responses import JSONResponse
+from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.config import get_settings
 from app.platforms.registry import build_adapters
@@ -13,12 +16,26 @@ from app.schemas import (
     PostingResponse,
 )
 from app.services.analysis_service import AnalysisService
-from app.services.llm_service import LLMError, LLMService
+from app.services.llm_factory import build_llm_service
+from app.services.llm_service import LLMError
 from app.services.posting_service import PostingService
 from app.services.website_extractor import WebsiteExtractor
 from app.utils.validators import WebsiteError
 
 app = FastAPI(title=get_settings().app_name)
+STATIC_DIR = Path(__file__).parent / "static"
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+
+@app.get("/", include_in_schema=False)
+async def dashboard() -> FileResponse:
+    return FileResponse(STATIC_DIR / "index.html")
+
+
+def require_demo_access(x_demo_key: Annotated[str | None, Header()] = None) -> None:
+    expected = get_settings().demo_access_key.get_secret_value()
+    if expected and not compare_digest((x_demo_key or "").encode(), expected.encode()):
+        raise HTTPException(status_code=401, detail="Enter the demo access key to continue.")
 
 
 @app.get("/health", tags=["health"])
@@ -27,7 +44,7 @@ async def health() -> dict[str, str]:
 
 
 def get_analysis_service() -> AnalysisService:
-    return AnalysisService(WebsiteExtractor(), LLMService(get_settings()))
+    return AnalysisService(WebsiteExtractor(), build_llm_service(get_settings()))
 
 
 @app.exception_handler(LLMError)
@@ -56,6 +73,7 @@ async def website_error_handler(request, exc: WebsiteError) -> JSONResponse:
     "/link-analysis",
     response_model=LinkAnalysisResponse,
     tags=["analysis"],
+    dependencies=[Depends(require_demo_access)],
     responses={status: {"model": ErrorResponse} for status in (400, 502, 503, 504)},
 )
 async def link_analysis(
@@ -72,7 +90,12 @@ def get_posting_service() -> PostingService:
     )
 
 
-@app.post("/posting", response_model=PostingResponse, tags=["posting"])
+@app.post(
+    "/posting",
+    response_model=PostingResponse,
+    tags=["posting"],
+    dependencies=[Depends(require_demo_access)],
+)
 async def posting(
     body: PostingRequest,
     service: Annotated[PostingService, Depends(get_posting_service)],

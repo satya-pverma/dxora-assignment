@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Dxora · Brand workspace</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  <header><a class="logo" href="/">d<span>×</span>ora<span class="badge">WORKSPACE</span></a><a href="/docs" target="_blank" rel="noopener">API documentation ↗</a></header>
+  <main>
+    <div class="eyebrow">WEBSITE & CONTENT</div>
+    <h1>Analysis workspace</h1>
+    <p class="intro">Review a website's positioning, search opportunities, and audience. Publish an update when you're ready.</p>
+    <details class="access"><summary>Demo access</summary><label for="demo-key">Access key (if provided by the owner)</label><input id="demo-key" type="password" autocomplete="off" placeholder="Enter the shared demo access key"><p>Provider credentials stay on the server. This access key is kept only in this page.</p></details>
+    <nav aria-label="Workspace"><button class="tab active" data-panel="analyze" aria-pressed="true">01 &nbsp; Website analysis</button><button class="tab" data-panel="publish" aria-pressed="false">02 &nbsp; Publish a message</button></nav>
+    <section id="analyze" class="panel">
+      <div class="card"><h2>Website analysis</h2><p>Enter a public website to create a structured business report.</p>
+        <form id="analysis-form"><label for="website">Website URL</label><div class="input-row"><input id="website" type="url" placeholder="https://your-website.com" required autocomplete="url"><button type="submit">Analyze website <span>↗</span></button></div></form>
+        <p class="hint">Public websites only. Analysis may take up to two minutes. AI suggestions should be reviewed.</p>
+      </div>
+      <div id="analysis-status" class="status" role="status" aria-live="polite"></div>
+      <div id="analysis-result" hidden></div>
+    </section>
+    <section id="publish" class="panel" hidden>
+      <div class="card"><h2>Publish an update</h2><p>Send one message to your configured platforms and review each publication result.</p>
+        <form id="posting-form"><label for="message">Your message</label><textarea id="message" rows="4" required placeholder="A short update with one link: https://your-website.com"></textarea><div class="message-meta"><span>Include exactly one http:// or https:// link.</span><span id="character-count">0 / 200</span></div><label class="confirmation"><input id="confirm-publish" type="checkbox" required> I understand this publishes a real message to all configured platforms.</label><button type="submit">Publish message ↗</button></form>
+      </div>
+      <div id="posting-status" class="status" role="status" aria-live="polite"></div>
+      <div id="posting-result" hidden></div>
+    </section>
+    <footer>Built for the Dxora assignment <span>FastAPI · Gemini · Five publishing platforms</span></footer>
+  </main>
+</body>
+</html>

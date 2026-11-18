@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+from typing import Protocol
 
 import httpx
 from pydantic import ValidationError
@@ -39,6 +40,62 @@ class LLMError(ValueError):
         self.status_code = status_code
 
 
+class AnalysisLLM(Protocol):
+    provider: str
+
+    @property
+    def model(self) -> str: ...
+
+    def require_credentials(self) -> None: ...
+
+    async def analyze(self, website: ExtractedWebsite) -> tuple[ModelAnalysis, dict]: ...
+
+
+def classify_limit_error(body: bytes) -> LLMError:
+    """Inspect only allowlisted error identifiers; never expose the upstream message."""
+    try:
+        data = json.loads(body)
+        error = data.get("error") if isinstance(data, dict) else None
+        error = error if isinstance(error, dict) else {}
+    except (ValueError, UnicodeError):
+        error = {}
+    code = error.get("code")
+    code = code if isinstance(code, str) else ""
+    limits = {
+        "credit_balance_exhausted": (
+            "llm_credit_balance_exhausted",
+            "The OpenAI API credit balance is exhausted. Check API billing.",
+        ),
+        "organization_spend_limit_exceeded": (
+            "llm_organization_spend_limit",
+            "The OpenAI organization API spend limit was reached.",
+        ),
+        "project_spend_limit_exceeded": (
+            "llm_project_spend_limit",
+            "The OpenAI project API spend limit was reached.",
+        ),
+        "organization_usage_limit_exceeded": (
+            "llm_organization_usage_limit",
+            "The OpenAI organization API usage limit was reached.",
+        ),
+        "insufficient_quota": (
+            "llm_quota_exceeded",
+            "OpenAI API quota is unavailable. Check API credits and usage limits.",
+        ),
+    }
+    if code in limits:
+        public_code, message = limits[code]
+    elif (
+        code not in {"rate_limit_exceeded", "slow_down"}
+        and error.get("type") == "insufficient_quota"
+    ):
+        public_code, message = limits["insufficient_quota"]
+    else:
+        public_code = "llm_rate_limited"
+        message = "The analysis provider is rate limited or returned an unclassified quota limit."
+    return LLMError(public_code, message, 503)
+
+
 def provider_schema() -> dict:
     schema = ModelAnalysis.model_json_schema()
 
@@ -58,9 +115,15 @@ def provider_schema() -> dict:
 
 
 class LLMService:
+    provider = "openai"
+
     def __init__(self, settings: Settings, transport: httpx.AsyncBaseTransport | None = None):
         self.settings = settings
         self.transport = transport
+
+    @property
+    def model(self) -> str:
+        return self.settings.llm_model
 
     def require_credentials(self) -> None:
         if not self.settings.openai_api_key.get_secret_value().strip():
@@ -116,9 +179,16 @@ class LLMService:
                         "llm_auth_error", "The analysis provider rejected server access.", 503
                     )
                 if response.status_code == 429:
-                    raise LLMError(
-                        "llm_rate_limited", "The analysis provider is rate limited.", 503
-                    )
+                    # Error messages can include private account data. Read a bounded body
+                    # only to distinguish known billing/quota codes from transient limits.
+                    error_body = bytearray()
+                    if response.headers.get("content-encoding", "identity").lower() == "identity":
+                        async for chunk in response.aiter_bytes():
+                            if len(error_body) + len(chunk) > 8192:
+                                error_body.clear()
+                                break
+                            error_body.extend(chunk)
+                    raise classify_limit_error(bytes(error_body))
                 if response.status_code != 200:
                     raise LLMError("llm_provider_error", "The analysis provider returned an error.")
                 if response.headers.get("content-encoding", "identity").lower() != "identity":

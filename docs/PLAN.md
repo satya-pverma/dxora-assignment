@@ -26,6 +26,7 @@ Review checks before merging. Never push to the source specification repository.
 | 7 | Mastodon, Bluesky, WordPress.com adapters and mocked coverage | Merged; live accounts/publication unverified |
 | 8 | Tumblr, Telegram, anonymous visibility checks and partial failures | Merged; live accounts/publication unverified |
 | 9 | Final documentation, dependency snapshot, verification instructions and submission checklist | Handoff prepared; PR/CI and live evidence outstanding |
+| 10 | Gemini provider, browser dashboard, and free deployment configuration | Local Gemini analysis confirmed by user; UI/deployment PR checks pending |
 
 Latest supplied local verification: all **196 tests passed** and Ruff passed on
 Windows/Python 3.13.17. Compilation, OpenAPI generation and documentation links
