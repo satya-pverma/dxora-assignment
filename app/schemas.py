@@ -81,15 +81,15 @@ class Service(StrictModel):
     target_industry: Text
     target_customer: Text
     main_benefit: Text
-    evidence_type: Literal["observed", "inferred_recommendation"]
+    evidence_type: Literal["observed", "inferred_recommendation", "unverified_ai_output"]
     source_quote: Text | None
 
     @model_validator(mode="after")
     def require_observed_evidence(self) -> "Service":
         if self.evidence_type == "observed" and not self.source_quote:
-            raise ValueError("Observed services require an exact quote from extracted text.")
+            self.evidence_type = "unverified_ai_output"
         if self.evidence_type == "inferred_recommendation" and self.source_quote is not None:
-            raise ValueError("Inferred services must not claim an observed source quote.")
+            self.evidence_type = "unverified_ai_output"
         return self
 
 

@@ -2,18 +2,19 @@
 
 import asyncio
 import json
+import random
 
 import httpx
 from pydantic import ValidationError
 
 from app.config import Settings
 from app.schemas import ModelAnalysis
-from app.services.llm_service import SYSTEM_PROMPT, LLMError, provider_schema
+from app.services.llm_service import QUOTE_REPAIR_PROMPT, SYSTEM_PROMPT, LLMError, provider_schema
 from app.services.website_extractor import ExtractedWebsite
 
 
-def gemini_schema() -> dict:
-    schema = provider_schema()
+def gemini_schema(website: ExtractedWebsite | None = None) -> dict:
+    schema = provider_schema(website)
     definitions = schema.get("$defs", {})
 
     def expand(node):
@@ -80,9 +81,29 @@ def parse_gemini_response(data: dict) -> tuple[ModelAnalysis, dict]:
     except (ValueError, TypeError, KeyError, AttributeError, ValidationError) as exc:
         if isinstance(exc, LLMError):
             raise
+        detail = ""
+        if isinstance(exc, ValidationError):
+            # Expose schema-owned field names and error categories only, never values,
+            # raw model JSON, arbitrary extra keys, or validator exception messages.
+            schema = ModelAnalysis.model_json_schema()
+            fields = set(schema.get("properties", {}))
+            for definition in schema.get("$defs", {}).values():
+                fields.update(definition.get("properties", {}))
+            failures = []
+            for error in exc.errors(include_input=False, include_context=False)[:3]:
+                path = ".".join(
+                    str(part) if isinstance(part, int) or part in fields else "field"
+                    for part in error["loc"]
+                ) or "response"
+                failures.append(f"{path}: {error['type']}")
+            detail = " Validation details: " + "; ".join(failures) + "."
         raise LLMError(
-            "llm_invalid_output", "Gemini analysis did not match the required schema."
+            "llm_invalid_output", "Gemini analysis did not match the required schema." + detail
         ) from exc
+
+
+class RetryableGeminiError(LLMError):
+    """A temporary upstream HTTP failure, safe to retry within the time budget."""
 
 
 class GeminiService:
@@ -100,18 +121,22 @@ class GeminiService:
         if not self.settings.gemini_api_key.get_secret_value().strip():
             raise LLMError("llm_not_configured", "Configure GEMINI_API_KEY on the server.", 503)
 
-    async def analyze(self, website: ExtractedWebsite) -> tuple[ModelAnalysis, dict]:
+    async def analyze(
+        self, website: ExtractedWebsite, *, repair_quotes: bool = False
+    ) -> tuple[ModelAnalysis, dict]:
         self.require_credentials()
         generation = {
             "candidateCount": 1,
             "responseMimeType": "application/json",
-            "responseJsonSchema": gemini_schema(),
+            "responseJsonSchema": gemini_schema(website),
             "maxOutputTokens": self.settings.llm_max_output_tokens,
         }
         if self.model.startswith("gemini-3"):
             generation["thinkingConfig"] = {"thinkingLevel": "low"}
         payload = {
-            "systemInstruction": {"parts": [{"text": SYSTEM_PROMPT}]},
+            "systemInstruction": {
+                "parts": [{"text": SYSTEM_PROMPT + (QUOTE_REPAIR_PROMPT if repair_quotes else "")}]
+            },
             "contents": [{"role": "user", "parts": [{"text": website.model_dump_json()}]}],
             "generationConfig": generation,
         }
@@ -125,6 +150,16 @@ class GeminiService:
         return parse_gemini_response(data)
 
     async def _request(self, payload: dict) -> dict:
+        for attempt in range(3):
+            try:
+                return await self._request_once(payload)
+            except (RetryableGeminiError, httpx.TransportError):
+                if attempt == 2:
+                    raise
+                await asyncio.sleep(2 ** attempt + random.uniform(0, 0.5))
+        raise AssertionError("Unreachable retry state")
+
+    async def _request_once(self, payload: dict) -> dict:
         async with httpx.AsyncClient(
             timeout=self.settings.llm_timeout_seconds,
             follow_redirects=False,
@@ -140,6 +175,12 @@ class GeminiService:
                     "Accept-Encoding": "identity",
                 },
             ) as response:
+                if response.status_code in {500, 502, 503, 504}:
+                    raise RetryableGeminiError(
+                        "llm_unavailable",
+                        "Gemini is temporarily unavailable. Please try again shortly.",
+                        503,
+                    )
                 errors = {
                     400: (
                         "llm_request_rejected",
@@ -162,7 +203,6 @@ class GeminiService:
                         "Gemini API quota or rate limit reached; check AI Studio limits.",
                         503,
                     ),
-                    503: ("llm_unavailable", "Gemini is temporarily unavailable.", 503),
                 }
                 if response.status_code in errors:
                     raise LLMError(*errors[response.status_code])
