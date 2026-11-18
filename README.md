@@ -191,9 +191,11 @@ explicit CTA formatting, and checks its canonical permalink and message without
 authentication. Formatting offsets count Unicode code points. The returned ID
 must be a positive unsigned 64-bit decimal string. Its response lacks a publication
 timestamp, so the adapter records local UTC completion time. Custom blog domains
-and UUID identifiers are not supported by this implementation. Obtain OAuth tokens
-outside this application and renew them manually; token acquisition/refresh is not
-implemented. Redirects, login challenges, larger themes, compression, or missing
+and UUID identifiers are not supported by this implementation. Initial OAuth
+authorization remains manual. Optional MongoDB-backed automatic renewal persists
+encrypted rotated tokens; see [Tumblr token setup](docs/TUMBLR_TOKEN_REFRESH.md).
+Static-token mode still requires manual renewal. Redirects, login challenges, larger
+themes, compression, or missing
 canonical markup can cause a public page to remain unverified.
 
 Telegram accepts a public channel username with or without `@`. Optionally set
@@ -366,7 +368,8 @@ Matching excerpts are labelled observed; unmatched quotes and inconsistent evide
 labels are returned as unverified_ai_output with report warnings. The dashboard
 labels these entries and quotes as unverified AI output. No additional generation
 is made for quote mismatches. The response schema includes this third evidence label.
-Caching, automatic provider fallback and token refresh are future work.
+Caching and automatic LLM-provider fallback are future work. Tumblr token refresh
+is available separately through the optional MongoDB configuration.
 The provider schema offers up to 256 literal source excerpts (300 characters each)
 as quote choices, plus null for recommendations. Local matching determines whether
 returned quotes are verified, without blocking the report on a mismatch.

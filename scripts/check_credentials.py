@@ -35,7 +35,13 @@ def main() -> int:
         else {"OpenAI": ("openai_api_key",)}
     )
     print(f"Selected analysis provider: {settings.llm_provider}")
-    for service, fields in (llm_required | REQUIRED).items():
+    required = dict(REQUIRED)
+    if settings.tumblr_auto_refresh:
+        required["Tumblr"] = (
+            "tumblr_blog_identifier", "tumblr_client_id", "tumblr_client_secret",
+            "mongodb_uri", "token_encryption_key",
+        )
+    for service, fields in (llm_required | required).items():
         missing = []
         for field in fields:
             value = getattr(settings, field)

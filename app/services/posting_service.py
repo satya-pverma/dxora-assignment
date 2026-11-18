@@ -16,6 +16,13 @@ ERROR_MESSAGES = {
     "invalid_response": "The platform returned an invalid publication response.",
     "outcome_uncertain": "Publication could not be confirmed; verify before retrying.",
     "invalid_configuration": "The configured platform endpoint is not a public HTTPS destination.",
+    "token_storage_unavailable": (
+        "Tumblr token storage is unavailable; check MongoDB and encryption settings."
+    ),
+    "token_refresh_busy": "Tumblr token refresh is in progress. Try again shortly.",
+    "token_refresh_reauthorization_required": (
+        "Tumblr token renewal could not be confirmed. Reauthorize and reseed its stored tokens."
+    ),
 }
 TIMEOUT_MESSAGE = "Posting timed out; publication may have occurred. Verify before retrying."
 
