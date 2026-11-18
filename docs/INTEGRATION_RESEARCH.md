@@ -1,15 +1,17 @@
 # Integration research and implementation decisions
 
-Research date: 17 November 2026. Scope: both practical tests. This document
-records official API capabilities and proposed implementation choices. No live
-publishing, account authentication, model benchmarking, or paid API calls were
-performed. All five publishing adapters are now implemented with mocked tests.
-All five still need live
-verification. Prices and account eligibility must be rechecked before deployment.
+Initial research: 17 November 2026; status and Gemini selection updated on
+**18 November 2026**. Five publishing adapters are implemented. A live combined
+request confirmed Mastodon, Bluesky, Tumblr and Telegram publication; automated
+public-access verification passed for Bluesky/Telegram and was inconclusive for
+Mastodon/Tumblr. WordPress live testing is deferred. Gemini 3.1 Flash-Lite now
+powers the working analysis; OpenAI remains an optional implemented adapter.
+This is integration evidence, not a comparative model benchmark. See
+[the verification record](VERIFICATION.md) for what remains unverified.
 
 ## Publishing platforms
 
-Proposed primary set: Mastodon, Bluesky, WordPress.com, Tumblr, and Telegram
+Implemented set: Mastodon, Bluesky, WordPress.com, Tumblr, and Telegram
 public channels. These provide text publishing without requiring media. The
 Telegram channel is a public publication destination; a private chat is not
 equivalent evidence. DEV/Forem is an alternative for developer-related messages.
@@ -81,16 +83,16 @@ not measured usage; reasoning tokens can increase the output bill.
 
 | Provider / model ID | Input / output rate | Context capacity | Structured output | Example cost | Speed and accuracy assessment |
 | --- | --- | --- | --- | --- | --- |
-| OpenAI `gpt-6-luna` | $0.10 / $0.50 | 1,050,000 tokens | Supported | $0.0018 | Proposed low-cost baseline; no application latency or accuracy measurements yet. |
-| Google `gemini-3.8-flash` | $0.75 / $3.75 through 31 Dec 2026; $1.50 / $7.50 from 1 Jan 2027 | 1,048,576 input tokens | Supported | $0.0135 at current promotional rate | Candidate for richer analysis; quality and speed relative to alternatives are unmeasured. |
+| OpenAI `gpt-6-luna` | $0.10 / $0.50 | 1,050,000 tokens | Supported | $0.0018 | Implemented manual alternative; live generation blocked by exhausted account credits. |
+| Google `gemini-3.1-flash-lite` (selected) | Free within eligible project quota; paid text $0.25 / $1.50 | 1,048,576 input tokens | Supported; live analysis validated | $0 within free quota; $0.005 paid estimate | One observed end-to-end response: 14.073s; cross-model accuracy and latency unbenchmarked. |
 | Anthropic `claude-haiku-5-5` | $0.10 / $0.50 for prompts up to 100,000 tokens; $0.50 / $2.50 above that threshold | 1M tokens | JSON schema output supported by Claude structured-output API; verify selected model/account in integration tests | $0.0018 in the lower prompt tier | Provider describes it as latency-sensitive; no application benchmark confirms superiority. |
 
-Sources checked:
+Sources: Gemini pricing/model limits rechecked 18 November 2026; other candidate rates retain the 17 November research date. Recheck before switching providers.
 
 - [OpenAI pricing](https://developers.openai.com/api/docs/pricing),
   [GPT-6 Luna capabilities and limits](https://developers.openai.com/api/docs/models/gpt-6-luna).
-- [Google pricing](https://aistudio.google.com/docs/pricing#gemini-3.8-flash),
-  [Gemini 3.8 Flash capabilities and limits](https://aistudio.google.com/docs/models/gemini-3.8-flash).
+- [Google pricing](https://ai.google.dev/gemini-api/docs/pricing#gemini-3.1-flash-lite),
+  [Gemini 3.1 Flash-Lite capabilities and limits](https://ai.google.dev/gemini-api/docs/models/gemini-3.1-flash-lite).
 - [Anthropic pricing](https://platform.claude.com/docs/en/about-claude/pricing),
   [Haiku 5.5 limits](https://platform.claude.com/docs/en/models/haiku-5-5/overview),
   [structured outputs](https://platform.claude.com/docs/en/build-with-claude/structured-outputs).
@@ -101,23 +103,32 @@ Use each provider's actual usage counters because tokenizers differ.
 
 ### Recommendation and fallback
 
-Start with OpenAI `gpt-6-luna` through the Responses API, configured by environment
-variables. The decision is provisional: low listed cost, schema output support,
-and ample context fit a bounded extraction task. No model has demonstrated
-maximum accuracy on this assignment. Use low/no reasoning where supported and
-retain Pydantic validation of every returned section.
+Use **Google Gemini `gemini-3.1-flash-lite`** for the current assignment demo.
+It produced the required structured response with the developer's free-tier key;
+its supported JSON schema output, low paid-tier text cost and adequate context
+fit the bounded website input. This recommendation prioritizes the demonstrated
+account access and schema-valid output, not an untested claim of best accuracy.
 
-Use `gemini-3.8-flash` as an explicitly configured alternative if the baseline
-fails the quality evaluation or is unavailable. Haiku 5.5 is a competing economical
-option worth benchmarking. Implement one provider first; a comparison does not
-require three production adapters. Automatic cross-provider fallback is deferred
-until both adapters pass contract tests and its extra cost is documented.
+Configuration: `LLM_PROVIDER=gemini`, `GEMINI_MODEL=gemini-3.1-flash-lite`,
+`GEMINI_API_KEY`, `LLM_TIMEOUT_SECONDS=90`, `LLM_MAX_OUTPUT_TOKENS=6000`.
+The Gemini 3 adapter requests low thinking and uses Pydantic validation. Expected
+input/output for cost planning remains 8,000/2,000 tokens, not observed usage.
+At paid text rates, `(8000 * 0.25 + 2000 * 1.50) / 1000000 = $0.005` per analysis;
+eligible free-tier text is $0 within quota. Include billable thinking output in
+real accounting. Free quotas, availability, and data-use policies are project-
+and tier-specific. Only public website content is used in the demo.
 
-Estimated response-time budget: 5–20 seconds for one model request and up to
-10 seconds for website extraction, targeting an ordinary end-to-end response
-within 30 seconds. These are engineering targets, not provider SLAs or measured
-latency; overloaded providers and difficult sites can exceed them. Enforce explicit
-timeouts and return useful errors rather than promising the target.
+One observed response took 14.073s including extraction. This is a single local
+observation, not median/p95 latency, an SLA, or a quality benchmark. Model calls
+have the configured 90s timeout for the demo and a separate 10s website deadline.
+Provider load, network and output length affect the observed time.
+
+OpenAI `gpt-6-luna` is the implemented, manually configurable alternative once
+billing/model access are available. The live account test reached an exhausted
+credit balance; successful generation remains unverified. Anthropic is research-
+only. Compare these candidates using the rubric below before making quality
+claims. Three production adapters are not required by the research section.
+Automatic fallback is not implemented and cannot silently incur another charge.
 
 ### Quality, evidence, and cost controls
 
@@ -137,40 +148,38 @@ must be distinguishable from observed services. Do not invent search volumes.
 
 Use one structured request for all five sections. Cache successful analysis by
 normalized URL, extracted-content hash, provider/model, prompt/schema version,
-and a bounded TTL. Cache failures separately only if deliberately designed.
+and a bounded TTL. Cache failures separately only if deliberately designed. Caching in this paragraph
+is a proposed optimization; the application does not currently cache results.
 Do not enable paid search grounding implicitly. Search-based competitor research
 requires explicit sources and separate cost accounting.
 
-Benchmark during the analysis milestone using the same saved public-site fixtures
+For a future comparative benchmark, use the same saved public-site fixtures
 and rubric for each accessible candidate. Include a service business, product
 business, sparse page, non-English page, and adversarial embedded instructions.
 Record sample size, model/version, reasoning settings, input/output usage,
 schema pass rate, unsupported-claim count, field coverage, reviewer scores,
 median/p95 latency, and total cost. Use repeated runs and retain sanitized output.
-Until then, every performance and accuracy claim remains unmeasured.
+Until then, relative performance and accuracy remain unmeasured; the single
+observed Gemini latency above does not establish superiority.
 
 ## Account prerequisites before live testing
 
-Store secrets in the ignored local `.env`, never in commits, PRs, screenshots,
-chat messages, or logs. The OpenAI adapter now reads `OPENAI_API_KEY`, `LLM_MODEL`,
-`LLM_TIMEOUT_SECONDS`, and `LLM_MAX_OUTPUT_TOKENS`.
-The posting workflow also reads `POSTING_PLATFORMS` (a JSON array of platform
-names) and `POSTING_TIMEOUT_SECONDS`. All five adapters now consume the listed
-configuration/credentials when `/posting` is invoked. Account access remains
-unverified. Tumblr token refresh is not implemented; supply a current token.
-Telegram channel ID is optional when its public username is configured.
+Store secrets in the ignored local `.env`, never in source, PRs, screenshots,
+chat, or logs. The selected Gemini configuration is documented above. The optional
+OpenAI adapter uses `OPENAI_API_KEY` and `LLM_MODEL`. Both share timeout/output
+limits. The publishing adapters use `POSTING_PLATFORMS` and platform credentials.
+Changing these values requires a server restart. Token refresh is manual.
 
-| Integration | Proposed configuration | Readiness |
+| Integration | Configuration | Verified status |
 | --- | --- | --- |
-| OpenAI | `OPENAI_API_KEY`, `LLM_MODEL=gpt-6-luna` | Account, model entitlement, and API billing unverified |
-| Gemini alternative | `GEMINI_API_KEY`, alternative model ID | Account and quota unverified |
-| Mastodon | `MASTODON_BASE_URL`, `MASTODON_ACCESS_TOKEN` | Account and token unverified |
-| Bluesky | `BLUESKY_PDS_URL`, `BLUESKY_HANDLE`, `BLUESKY_APP_PASSWORD` | Account and session flow unverified |
-| WordPress.com | `WORDPRESS_SITE_ID`, `WORDPRESS_ACCESS_TOKEN` | Public site and publishing rights unverified |
-| Tumblr | `TUMBLR_BLOG_IDENTIFIER`, `TUMBLR_ACCESS_TOKEN`; OAuth client/refresh secrets if refreshing | Blog and OAuth registration unverified |
-| Telegram | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHANNEL_ID`, `TELEGRAM_CHANNEL_USERNAME` | Public channel and bot posting rights unverified |
+| Gemini | `LLM_PROVIDER=gemini`, `GEMINI_MODEL=gemini-3.1-flash-lite`, `GEMINI_API_KEY` | Live structured analysis passed |
+| OpenAI | `LLM_PROVIDER=openai`, `OPENAI_API_KEY`, `LLM_MODEL` | Adapter tested with mocks; account credit exhausted |
+| Mastodon | `MASTODON_BASE_URL`, `MASTODON_ACCESS_TOKEN` | Published; automatic public check inconclusive |
+| Bluesky | `BLUESKY_PDS_URL`, `BLUESKY_HANDLE`, `BLUESKY_APP_PASSWORD` | Published and public check passed |
+| WordPress.com | `WORDPRESS_SITE_ID`, `WORDPRESS_ACCESS_TOKEN` | Implemented; live setup/test deferred |
+| Tumblr | `TUMBLR_BLOG_IDENTIFIER`, `TUMBLR_ACCESS_TOKEN` | OAuth2 authorized and published; public check inconclusive |
+| Telegram | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHANNEL_USERNAME`; optional `TELEGRAM_CHANNEL_ID` | Bot permissions, transport, publication and public check passed |
 
-Before recording the final demonstration, verify all five destinations with
-working credentials and an authorized test message. If access fails, document
-the failure and select a suitable researched replacement; do not silently count
-an unimplemented adapter, private chat, or mock response as successful publication.
+For final evidence, finish the fifth destination and check anonymous post links.
+Do not count mock fixtures as publication or an inconclusive public check as proof
+that a post is private. Reconcile uncertain outcomes before retrying writes.

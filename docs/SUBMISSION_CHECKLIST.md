@@ -1,71 +1,80 @@
 # Submission checklist
 
-Final submission deadline in both source specifications: **22 November 2026**.
-The source documents describe a two-hour analysis task and conflicting 2–3/four
-hour posting limits. Report actual time honestly; no time-compliance claim is
-made by this repository.
+Reviewed against the source documents on **18 November 2026**.
 
-## Repository and verification
+| Task | Deadline | Email subject |
+| --- | --- | --- |
+| Link analysis | 27 November 2026 (source typo: 27nd) | Your Name - Python Practical Link Analysis test review |
+| Posting | 22 November 2026 | Your Name - Python Practical test review |
 
-- [x] Own public-repository destination selected: https://github.com/satya-pverma/dxora-assignment
-- [x] FastAPI endpoints implemented for both tests, with five publishing adapters.
-- [x] Website validation/SSRF protection, bounded HTTP, structured-output validation,
-  per-platform failure handling and credential configuration documented.
-- [x] Latest supplied local result: 196 passing tests and Ruff passed.
-- [x] API request/response examples included and clearly marked synthetic.
-- [x] At least three LLM options, dated pricing, estimates and a provisional
-  recommendation documented in the README-linked research report.
-- [ ] Final PR CI jobs passed on their actual commits.
-- [ ] Public repository visibility checked on GitHub.
-- [ ] Live website extraction and HTTPS/SNI verified.
-- [ ] Live `/link-analysis` response reviewed and sanitized evidence saved.
-- [ ] All five platform accounts/permissions and actual publications verified.
-- [ ] Public access checked for the actual returned post URLs.
-- [ ] Sanitized live screenshots/logs committed or attached for review.
-- [ ] Actual model token usage/cost and latency recorded; quality estimates remain
-  labelled unless measured. No unsupported accuracy or speed claims.
-- [ ] Staged files reviewed: no `.env`, tokens, bot secrets, passwords or private
-  applicant details. Raw local evidence is excluded from Git.
-- [ ] Setup from a clean environment checked by the reviewer/developer.
+Link analysis requires a public live deployment and API documentation URL.
+Posting still has the earlier deadline; do not assume its date was extended.
+The task time budgets are two hours for analysis and conflicting 2-3/four hours
+for posting. Report actual effort honestly.
 
-Use [the verification runbook](VERIFICATION.md) for the outstanding checks.
+## Completed implementation and local verification
 
-## Application verification and email
+- [x] Own repository selected: https://github.com/satya-pverma/dxora-assignment
+- [x] FastAPI /link-analysis and message-only /posting implemented.
+- [x] Five analysis sections, structured validation, inference labels and URL/SSRF protection.
+- [x] Three-provider comparison, estimated costs, selection rationale and alternative documented.
+- [x] Live Gemini gemini-3.1-flash-lite analysis confirmed locally.
+- [x] Five publishing adapters implemented with independent errors and public-access reporting.
+- [x] Live publication confirmed for Mastodon, Bluesky, Tumblr and Telegram.
+- [x] Automatic anonymous verification passed for Bluesky and Telegram in the observed run.
+- [x] Browser UI, demo access, selected-destination endpoint and analysis rate limit implemented.
+- [x] Latest developer verification: 255 tests passed and Ruff passed.
+- [x] Setup files, environment template, synthetic API examples and Render configuration supplied.
 
-The documents request following Dxora Technologies on LinkedIn and CREST on
-Instagram, and sharing applicant profile links. Complete those steps personally
-and include the requested links with the application. They are not performed by
-this codebase.
+## Remaining verification and delivery
 
-Prepare the following email only after reviewing the repository and evidence.
-Replace the placeholders locally; the email has not been sent.
+- [ ] WordPress.com credentials/site configured and actual publication tested (deferred).
+- [ ] Mastodon and Tumblr visibility checked anonymously; record restrictions if inconclusive.
+- [ ] Assignment /posting demonstrated with all five server-enabled destinations.
+- [x] Developer-supplied four-platform publishing response saved under docs/evidence.
+- [ ] Analysis output, exact test request and deployment screenshots/logs archived.
+- [ ] Public deployment completed; live UI, /link-analysis and /docs verified.
+- [ ] Demo access key shared privately with reviewers and hosted credentials checked.
+- [ ] Final GitHub CI jobs verified for the actual submitted commit.
+- [ ] Public repository access and setup from a clean environment verified.
+- [ ] Actual model usage/cost and run environment recorded where available; estimates remain labelled.
+- [ ] Staged source and evidence checked for tokens, secret paths and private data; .env stays ignored.
+- [ ] Required LinkedIn/Instagram follows completed and applicant profile links collected.
+- [ ] Submission details, demo/repository links and preferred discussion time reviewed.
+- [ ] Submission email sent personally before each applicable deadline.
+
+Use [the verification runbook](VERIFICATION.md) and [deployment guide](DEPLOYMENT.md).
+The examples under docs/examples are synthetic, not evidence of live publication.
+Formal multi-model accuracy/speed benchmarks are not completed and are not required
+to claim one functioning integration. Do not claim tested superiority.
+
+## Email preparation
+
+Send to `hr@chivoxai.com`, using the subject for the task being submitted above.
+The analysis submission must include the live Demo Link; include /docs as well.
+No submission email has been sent by the application or assistant.
 
 ```text
-To: hr@chivoxai.com
-Subject: [Your full name] - Python Practical test review
-
 Hello,
 
 Please find my Python practical-test submission below.
 
-Full name: [Your name]
+Full name: [Your full name]
+Live demo: [Public deployment URL]
+API documentation: [Public deployment URL]/docs
 Public repository: https://github.com/satya-pverma/dxora-assignment
 Contact number: [Your number]
 Current location: [City, State]
-Preferred discussion time: [Date, time, and timezone]
+Preferred discussion time: [Date, time and timezone]
 LinkedIn profile: [Your profile URL]
 Instagram profile: [Your profile URL]
 
-Implemented: website analysis and multi-platform posting through five adapters.
-Verification and live evidence: [Accurate status and repository evidence links]
-Known limitations: [Any remaining account, publishing, or model-evaluation limits]
+Analysis model: Google Gemini gemini-3.1-flash-lite.
+Verification evidence: [Repository evidence links]
+Known limitations: [Accurate remaining limitations at submission time]
 
 Thank you,
-[Your name]
+[Your full name]
 ```
 
-- [ ] Mandatory profile-following and profile-link steps completed.
-- [ ] Full name, contact number, location and discussion availability filled in.
-- [ ] Public repository/evidence URLs tested by the applicant.
-- [ ] Remaining limitations accurately disclosed.
-- [ ] Submission email reviewed and sent by the applicant before the deadline.
+Keep applicant contact details and demo keys out of public source and screenshots.

@@ -5,17 +5,27 @@ Python/FastAPI implementation of the two practical tests published in
 
 ## Status
 
-The FastAPI foundation, website extraction service, `/link-analysis`, and
-`/posting` orchestration are implemented, with Mastodon, Bluesky, WordPress.com,
-Tumblr, and Telegram publishing adapters. No live publishing has been demonstrated;
-missing credentials produce explicit failures.
+Status reviewed on **18 November 2026** against both source assignment documents.
+Website extraction, Gemini-powered analysis, and all five publishing adapters are
+implemented. The developer's latest full Windows/Python 3.13.17 run reports
+**255 tests passed and Ruff passed**. Tests use fake providers and do not publish.
 
-Latest supplied local verification: **196 tests passed and Ruff passed** on
-Windows with Python 3.13.17. Live LLM calls, public posting, and model benchmarks
-remain unverified; no credentials are configured in the current local environment.
-See [verification and evidence](docs/VERIFICATION.md),
-[submission checklist](docs/SUBMISSION_CHECKLIST.md), and
-[implementation progress](docs/PLAN.md).
+The live analysis uses **Google Gemini `gemini-3.1-flash-lite`** on the developer's
+free-tier project. Four-platform publication succeeded in one live request:
+
+| Platform | Publication | Automatic public-access verification |
+| --- | --- | --- |
+| Mastodon | Confirmed | Inconclusive; anonymous manual check pending |
+| Bluesky | Confirmed | Passed |
+| Tumblr | Confirmed | Inconclusive; anonymous manual check pending |
+| Telegram | Confirmed | Passed |
+| WordPress.com | Adapter implemented; live test deferred | Pending |
+
+Public deployment and its live `/docs` URL remain pending. A Render configuration
+is supplied, not evidence of deployment. The [live four-platform response](docs/evidence/posting-live-2026-11-18.json) is
+recorded; analysis and deployment evidence still need to be archived. See the [verification record](docs/VERIFICATION.md),
+[submission checklist](docs/SUBMISSION_CHECKLIST.md),
+[implementation plan](docs/PLAN.md), and [deployment guide](docs/DEPLOYMENT.md).
 
 ## Setup
 
@@ -37,9 +47,27 @@ versions, including test tools. For other supported environments, install
 checks Linux/Python 3.11 with those ranges and Windows/Python 3.13 with the
 snapshot. CI results must be checked on the actual PR. The assignment's server
 command may use `--host 0.0.0.0` on the same port; the local default above binds
-only to your machine. The application has no inbound API authentication.
+only to your machine. Set `DEMO_ACCESS_KEY` to protect analysis and publishing.
+Requests then require `X-Demo-Key`; the UI sends the entered demo key. An empty
+setting leaves those actions open. Health, the UI, and documentation remain public.
 
-API documentation: http://localhost:4000/docs
+Browser UI: http://localhost:4000 | API documentation: http://localhost:4000/docs
+
+Configure the working analysis provider in `.env` (never commit actual secrets):
+
+```dotenv
+LLM_PROVIDER=gemini
+GEMINI_MODEL=gemini-3.1-flash-lite
+GEMINI_API_KEY=your_private_key
+LLM_TIMEOUT_SECONDS=90
+LLM_MAX_OUTPUT_TOKENS=6000
+DEMO_ACCESS_KEY=your_private_demo_password
+```
+
+The environment template selects Gemini. The Python Settings fallback remains
+OpenAI when `LLM_PROVIDER` is omitted; use the explicit configuration above.
+Restart the server after changing environment values. The UI never receives
+provider credentials.
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest
@@ -53,11 +81,21 @@ API documentation: http://localhost:4000/docs
 - `POST /link-analysis`: website extraction and structured LLM analysis.
 - `POST /posting`: validated messages published through five independent integrations.
 - `GET /health`: application health check.
+- `GET /`: browser workspace for analysis and publishing.
+- `GET /dashboard/platforms`: names and configuration availability, never secrets.
+- `POST /dashboard/posting`: UI-only message plus a validated platform selection.
+
+The assignment's `/posting` endpoint still accepts only `message` and chooses its
+platforms internally. The optional dashboard endpoint adds user selection without
+changing that contract. The UI requires a selection and publication confirmation.
 
 ## Posting API
 
 ```powershell
+$demoKey = Read-Host 'Demo access key' -AsSecureString
+$headers = @{ 'X-Demo-Key' = [System.Net.NetworkCredential]::new('', $demoKey).Password }
 Invoke-RestMethod -Method Post -Uri http://localhost:4000/posting `
+    -Headers $headers `
     -ContentType 'application/json' `
     -Body '{"message":"Discover our services https://example.com"}'
 ```
@@ -181,37 +219,36 @@ References: [Tumblr API](https://github.com/tumblr/docs/blob/master/api.md),
 
 Tests cover all five adapters, partial failures, visibility checks, bounded HTTP,
 configuration validation, and token-safe logging using simulated DNS/HTTP and
-fake credentials. No live publication, OAuth login, or permission changes were
-performed. See [recorded verification](docs/VERIFICATION.md) for the results and
+fake credentials. Live publication results are recorded separately above. See [recorded verification](docs/VERIFICATION.md) for the results and
 the remaining live checks.
-
-## Website analysis API
 
 ## Browser workspace and hosting
 
-Restart the server and open http://localhost:4000 for website analysis and publishing
-forms, readable results, and full JSON responses. Publishing requires confirmation
-and uses the platform credentials configured on the server.
+Open `/` for section-based analysis reports and publishing controls. The six
+report tabs cover overview, competitors, search queries, SEO, services, and
+audience. Full JSON remains expandable. Platform checkboxes show availability
+from server settings; only enabled platforms with credential fields can be
+selected. This presence check is not proof of account permissions.
 
-See [deployment instructions](docs/DEPLOYMENT.md) for a single Render Free service
-hosting the UI and API. `render.yaml` includes the configuration. Set
-`DEMO_ACCESS_KEY` on the hosted service and enter it under **Demo access** in the UI.
-Direct API clients send this value in the `X-Demo-Key` header. Local access remains
-open when the setting is empty. Provider credentials never go in the browser.
+For the four tested destinations, set:
 
-### Analysis configuration
+```dotenv
+POSTING_PLATFORMS=["mastodon","bluesky","tumblr","telegram"]
+```
 
-## Browser UI and deployment
+Enable `wordpress` once its owned site/token are ready for testing. `/posting`
+publishes to all server-selected platforms; the dashboard publishes only to its
+selected subset. Neither flow automatically retries a publication.
 
-Open `/` for the analysis and publishing dashboard. Both flows use the existing
-API, and provider credentials stay on the server. See
-[local review and free Render deployment](docs/DEPLOYMENT.md).
+See [free Render deployment](docs/DEPLOYMENT.md). Set the demo access key and
+provider secrets in the hosting dashboard; never upload `.env`. Public deployment
+is required by the latest link-analysis assignment and is not completed yet.
 
-### Analysis configuration
+## Website analysis API
 
 Select a provider in your ignored local `.env`. For Gemini, set
-`LLM_PROVIDER=gemini`, `GEMINI_API_KEY` and `GEMINI_MODEL=gemini-3.8-flash`.
-For OpenAI (the default), set `LLM_PROVIDER=openai`, `OPENAI_API_KEY` and
+`LLM_PROVIDER=gemini`, `GEMINI_API_KEY` and `GEMINI_MODEL=gemini-3.1-flash-lite`.
+For the optional OpenAI adapter, set `LLM_PROVIDER=openai`, `OPENAI_API_KEY` and
 `LLM_MODEL=gpt-6-luna`. Both adapters use the same validated analysis contract.
 Restart the server after changing configuration. No key is required for health
 checks or mocked tests. There is no automatic provider fallback.
@@ -223,12 +260,15 @@ requests may be used to improve Google products; use public website content.
 
 ```powershell
 Invoke-RestMethod -Method Post -Uri http://localhost:4000/link-analysis `
+    -Headers $headers `
     -ContentType 'application/json' -Body '{"url":"https://example.com"}'
 ```
 
 See the [sample request](docs/examples/link-analysis.request.json) and
 [complete synthetic response](docs/examples/link-analysis.response.json). The
 response is a validated test fixture, not a real analysis of example.com.
+The PowerShell example reuses `$headers` from the posting example; supply your
+demo key whenever `DEMO_ACCESS_KEY` is set.
 
 The response includes `success`, `website`, `brand`, `analysis`, and `metadata`.
 Analysis contains competitor comparisons, exactly five distinct search queries
@@ -246,6 +286,8 @@ it does not prove that every model interpretation is correct.
 | HTTP status | Meaning |
 | --- | --- |
 | 200 | All five sections passed response validation |
+| 401 | Missing or incorrect demo access key |
+| 429 | Two analysis attempts per client IP in 60 seconds exceeded; inspect Retry-After |
 | 400 | Destination blocked or redirect unsafe |
 | 422 | Request body or URL format failed validation |
 | 502 | Website/provider failure, malformed model output, refusal, incomplete output, or unsupported quote |
@@ -264,45 +306,62 @@ identify project/organization spend limits and organization usage limits.
 retry a billing/quota error; inspect the API organization's billing and limits.
 These errors retain HTTP 503 and never expose the provider's raw account message.
 
-`LLM_TIMEOUT_SECONDS` defaults to 30 (allowed range: greater than zero through
-120). `LLM_MAX_OUTPUT_TOKENS` defaults to 6000 (allowed range: 1000–16000).
+`LLM_TIMEOUT_SECONDS` has a code fallback of 30 seconds; the supplied template
+and current demo use 90 seconds (allowed range: greater than zero through 120). `LLM_MAX_OUTPUT_TOKENS` defaults to 6000 (allowed range: 1000–16000).
 The website fetch has its separate 10-second deadline. The model receives the
-cleaned page as untrusted data, with schema output and no tools. Provider requests
-disable response storage (`store=false`), do not follow redirects, have a 256 KB
-response bound, and are not retried automatically. This does not change the
-provider's independent data-retention policies. Calls incur provider charges;
+cleaned page as untrusted data, with schema output and no tools. Both provider requests disable proxies and redirects, have a 256 KB response
+bound, and are not retried automatically. OpenAI additionally sets `store=false`. This does not change the
+provider's independent data-retention policies. Paid-tier calls incur provider charges; eligible Gemini free-tier calls use project quota;
 the 6000-token output cap is an upper bound, not measured usage or a cost estimate.
 Caching, automatic fallback, and cross-model benchmarks remain future work.
 
 Official contract: [OpenAI structured outputs](https://developers.openai.com/api/docs/guides/structured-outputs).
-Live model quality, actual token cost, and end-to-end latency have not been
-benchmarked. Unit/integration tests simulate the provider and website responses.
+Live Gemini responses were reviewed locally. One observed response reported
+14.073 seconds end to end; this single observation is not a speed benchmark or
+accuracy score. Actual token usage and account billing have not been archived.
+Unit/integration tests simulate provider and website responses.
+
+Analysis is limited to two valid, authorized attempts per client IP in a rolling
+60-second window. A rejected request returns HTTP 429 with `Retry-After`; the UI
+displays the wait time. Provider failures still count. The in-memory limit resets
+on restart and assumes one worker/instance. See the deployment guide for proxy
+and shared-storage limitations. Publishing is unaffected by this analysis limit.
 
 ## LLM comparison and selection
 
-The researched baseline is OpenAI `gpt-6-luna`, selected provisionally for listed
-cost, structured JSON support, and context capacity. No candidate has been proven
-most accurate or fastest on this application's workload. Standard text pricing
-checked on 17 November 2026, in USD per million tokens:
+**Selected provider/model: Google Gemini `gemini-3.1-flash-lite`.** It generated
+schema-valid analysis in the developer's live tests using available free quota.
+This practical choice avoids buying credits for the demo and supports the shared
+JSON contract. It is not a claim that this model is the most accurate or fastest.
 
-| Candidate | Input / output | Context | JSON schema output | Illustrative analysis cost |
+The assignment asks for research on at least three models/providers, not three
+active integrations. OpenAI is an implemented, explicitly configured alternative;
+its local live test was blocked by exhausted API credits. Anthropic is researched
+but has no adapter. Automatic provider fallback is not implemented.
+
+| Candidate | Standard text input / output per million tokens | Input context | Schema output | Estimated cost: 8k input + 2k billable output |
 | --- | --- | --- | --- | --- |
-| OpenAI `gpt-6-luna` | $0.10 / $0.50 | 1,050,000 tokens | Supported | $0.0018 |
-| Google `gemini-3.8-flash` | $0.75 / $3.75 through 31 Dec 2026 | 1,048,576 input tokens | Supported | $0.0135 |
-| Anthropic `claude-haiku-5-5` | $0.10 / $0.50 for prompts up to 100,000 tokens | 1M tokens | Supported; model/account integration untested | $0.0018 |
+| Gemini `gemini-3.1-flash-lite` (selected) | Free within eligible quota; paid $0.25 / $1.50 | 1,048,576 | Supported; live analysis passed | Free within quota; $0.005 paid-tier estimate |
+| OpenAI `gpt-6-luna` | $0.10 / $0.50 | 1,050,000 | Supported; mocked adapter tests | $0.0018 estimate |
+| Anthropic `claude-haiku-5-5` | $0.10 / $0.50 through 100k prompt tokens | 1M | Supported; not integrated | $0.0018 estimate |
 
-These examples assume 8,000 input and 2,000 billable output tokens, exclude tools,
-retries/taxes, and are estimates. The implementation's 6,000-output-token cap is
-larger than that assumption. Gemini rates rise to $1.50/$7.50 on 1 January 2027;
-Haiku's over-100k prompt tier is $0.50/$2.50. Count actual provider usage, including
-reasoning, for a real bill. Tokenizers differ.
+Google rates and model limits were checked on 18 November 2026; the other two
+rows retain the dated 17 November research. Verify availability and current
+prices before switching. These costs exclude tools, retries, taxes and caching;
+billable output includes reasoning. The selected model's 6,000-output-token cap
+is a limit, not measured usage. Free quota is account-specific and not an SLA;
+Google may use free-tier requests to improve products. Use public website content.
 
-Expected model response target is 5–20 seconds, with a separate ten-second website
-fetch budget; these are unmeasured targets, not benchmarks or SLAs. Recommended
-configured alternative: Gemini Flash if the baseline fails quality evaluation.
-OpenAI and Gemini are implemented; automatic fallback is not. Clean and bound content,
-remove duplicate boilerplate, and request all sections together to control cost.
-Caching and cross-model evaluations remain future work.
+[Google pricing](https://ai.google.dev/gemini-api/docs/pricing#gemini-3.1-flash-lite)
+and [model limits](https://ai.google.dev/gemini-api/docs/models/gemini-3.1-flash-lite).
+Planning input/output budget: 8,000/2,000 tokens; paid estimate:
+`(8000 * 0.25 + 2000 * 1.50) / 1000000 = $0.005`.
+
+Observed local latency is roughly 14 seconds for one recorded run, including
+extraction. Performance across sites/models and factual accuracy remain
+unbenchmarked. Gemini uses low thinking for Gemini 3 models and local Pydantic
+validation. Content cleaning, truncation and a single call for all five sections
+reduce token use. Caching, automatic fallback and token refresh are future work.
 
 [The detailed research report](docs/INTEGRATION_RESEARCH.md) includes official
 pricing/model sources, cost calculations, caveats, a benchmark rubric, and the
@@ -356,18 +415,21 @@ and known TestClient deprecation warning are recorded in the verification report
 
 ## Manual GitHub workflow
 
-The foundation is published on `main`. The remote is configured as
-`https://github.com/satya-pverma/dxora-assignment.git`.
+Use a new feature branch from updated `main`, commit the reviewed changes, and
+open a PR into this repository's `main`. Check the actual PR CI before merging.
+The assignment source repository is read-only for this project. The developer
+handles GitHub commits, pushes, PRs and merges manually.
 
-Each subsequent milestone uses a separate branch and pull request. Once the
-working changes are on `chore/submission-handoff`, review and publish them:
+## Assignment submission
 
-```powershell
-git add .gitignore .github/workflows/ci.yml README.md docs requirements-tested.txt scripts
-git commit -m "chore: prepare submission handoff and reproducible checks"
-git push -u origin chore/submission-handoff
-```
+| Source document | Deadline | Required email subject |
+| --- | --- | --- |
+| [Link analysis](https://github.com/chivoxai/practical-test/blob/main/link-analysis.md) | 27 November 2026 (source typo: "27nd") | Your Name - Python Practical Link Analysis test review |
+| [Posting](https://github.com/chivoxai/practical-test/blob/main/python-post-message.md) | 22 November 2026 | Your Name - Python Practical test review |
 
-Then open a pull request from `chore/submission-handoff` into `main` in your own
-repository. Review the changes and CI results before merging. Create the next
-feature branch from the updated `main` after merging.
+The analysis submission requires a public working demo URL and `/docs`, plus the
+public repository, setup instructions, examples, LLM comparison, final model
+recommendation and sanitized evidence. Both documents require applicant details
+and the specified LinkedIn/Instagram follows and profile links. Those personal
+steps and the submission emails have not been verified or performed by this app.
+Use the [submission checklist](docs/SUBMISSION_CHECKLIST.md) for outstanding work.
