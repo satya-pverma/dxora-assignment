@@ -4,6 +4,18 @@ The same FastAPI service serves the browser UI at `/`, Swagger at `/docs`, and
 both JSON endpoints. There is no frontend build, second service, database, or
 browser-side provider key. Analysis and publishing run independently.
 
+The publishing UI lists all five platforms with checkboxes. A platform is selectable
+only when it is listed in `POSTING_PLATFORMS` and its required credential fields are
+present. Presence does not verify permissions. No destinations are checked by default.
+For example, enable both test accounts with `POSTING_PLATFORMS=["telegram","mastodon"]`
+and restart the server. Select destinations and confirm before publishing.
+
+`GET /dashboard/platforms` returns only platform availability, never secrets.
+`POST /dashboard/posting` accepts a message and selected `platforms`, validates the
+selection against the server configuration, and requires the same demo access key.
+The assignment endpoint `POST /posting` remains message-only and selects platforms
+internally from server configuration.
+
 `/link-analysis` allows two requests per client IP in a rolling 60-second window.
 Further requests return HTTP 429 and `Retry-After` seconds; the UI displays the
 wait time. Valid authorized attempts count even if a provider later fails.

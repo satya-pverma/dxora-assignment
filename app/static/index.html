@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Dxora · Brand workspace</title>
-  <link rel="stylesheet" href="/static/style.css">
-  <script src="/static/app.js" defer></script>
+  <link rel="stylesheet" href="/static/style.css?v=platforms-2">
+  <script src="/static/app.js?v=platforms-2" defer></script>
 </head>
 <body>
   <header><a class="logo" href="/">d<span>×</span>ora<span class="badge">WORKSPACE</span></a><a href="/docs" target="_blank" rel="noopener">API documentation ↗</a></header>
@@ -24,7 +24,12 @@
     </section>
     <section id="publish" class="panel" hidden>
       <div class="card"><h2>Publish an update</h2><p>Send one message to your configured platforms and review each publication result.</p>
-        <form id="posting-form"><label for="message">Your message</label><textarea id="message" rows="4" required placeholder="A short update with one link: https://your-website.com"></textarea><div class="message-meta"><span>Include exactly one http:// or https:// link.</span><span id="character-count">0 / 200</span></div><label class="confirmation"><input id="confirm-publish" type="checkbox" required> I understand this publishes a real message to all configured platforms.</label><button type="submit">Publish message ↗</button></form>
+        <form id="posting-form"><fieldset class="platform-picker">
+          <legend>Destinations</legend>
+          <div class="destination-toolbar"><p>Choose where to publish this update.</p><button id="refresh-platforms" type="button" class="refresh-platforms">Refresh connections</button></div>
+          <div id="platform-options" aria-busy="true">Loading destinations...</div>
+          <div class="destination-footer"><span id="platform-selection-count" role="status">No destinations selected</span><span>Unavailable platforms cannot be selected.</span></div>
+        </fieldset><label for="message">Your message</label><textarea id="message" rows="4" required placeholder="A short update with one link: https://your-website.com"></textarea><div class="message-meta"><span>Include exactly one http:// or https:// link.</span><span id="character-count">0 / 200</span></div><label class="confirmation"><input id="confirm-publish" type="checkbox" required> I understand this publishes a real message to the selected platforms.</label><button type="submit">Publish message ↗</button></form>
       </div>
       <div id="posting-status" class="status" role="status" aria-live="polite"></div>
       <div id="posting-result" hidden></div>
