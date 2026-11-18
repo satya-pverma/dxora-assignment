@@ -55,6 +55,32 @@ def require_refresh_config(settings: Settings) -> None:
 
 
 def refresh_tumblr(settings: Settings, refresh_token: str) -> dict:
+    stage = "connect"
+
+    def trace(name, info):
+        nonlocal stage
+        # Never inspect trace details: they can contain headers and credentials.
+        phases = {
+            "connection.connect_tcp.started": "connect",
+            "connection.start_tls.started": "tls",
+            "http11.send_request_headers.started": "send_headers",
+            "http11.send_request_body.started": "send_body",
+            "http11.receive_response_headers.started": "receive_headers",
+            "http11.receive_response_body.started": "receive_body",
+        }
+        stage = phases.get(name, stage)
+
+    try:
+        return _refresh_tumblr_request(settings, refresh_token, trace)
+    except httpx.TransportError as exc:
+        logger.error(
+            "Tumblr renewal transport failure stage=%s exception_type=%s",
+            stage, type(exc).__name__,
+        )
+        raise
+
+
+def _refresh_tumblr_request(settings: Settings, refresh_token: str, trace) -> dict:
     # Fixed HTTPS destination, form body credentials, no proxy/redirects/retries.
     with httpx.Client(timeout=8, trust_env=False, follow_redirects=False) as client:
         with client.stream(
@@ -62,6 +88,7 @@ def refresh_tumblr(settings: Settings, refresh_token: str) -> dict:
             data={"grant_type": "refresh_token", "refresh_token": refresh_token,
                   "client_id": settings.tumblr_client_id,
                   "client_secret": settings.tumblr_client_secret.get_secret_value()},
+            extensions={"trace": trace},
         ) as response:
             body = bytearray()
             for chunk in response.iter_bytes():
@@ -171,6 +198,7 @@ class TumblrTokenStore:
                     raise PlatformError("token_storage_unavailable")
                 return tokens["access_token"]
             except Exception as exc:
+                before_send = isinstance(exc, (httpx.ConnectError, httpx.ConnectTimeout))
                 if isinstance(exc, httpx.TransportError):
                     failure = "token_refresh_network_failed"
                 elif isinstance(exc, PyMongoError):
@@ -180,13 +208,16 @@ class TumblrTokenStore:
                 else:
                     failure = "token_refresh_response_invalid"
                 logger.error("Tumblr renewal failed category=%s", failure)
-                # Never silently revert to stale environment credentials or replay
-                # an old refresh token after an ambiguous refresh/persistence result.
+                # Connect failures occur before OAuth is sent, so those tokens can
+                # safely be reused later. Read/write failures remain uncertain.
                 try:
                     self.collection.update_one(
                         {"_id": self.record_id, "version": record["version"],
                          "state": "refreshing"},
-                        {"$set": {"state": "reauthorize", "last_error": failure}},
+                        {"$set": {
+                            "state": "ready" if before_send else "reauthorize",
+                            "last_error": failure,
+                        }},
                     )
                 except PyMongoError:
                     pass

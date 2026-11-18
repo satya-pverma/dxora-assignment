@@ -79,6 +79,9 @@ behavior remains available when `TUMBLR_AUTO_REFRESH=false`.
 
 OAuth rotation and MongoDB persistence cannot be one atomic transaction. A crash,
 timeout, invalid refresh response or failed save can leave rotation uncertain.
+Connection-establishment failures before sending OAuth leave the record ready for
+a later request; read/write failures remain uncertain. Safe Render logs show only
+the connection stage and exception class, without trace details or credentials.
 The code never replays an uncertain refresh or steals an abandoned claim. A claim
 older than 60 seconds requires reauthorization. Obtain fresh tokens, update `.env`,
 stop posting in ALL environments sharing this record, then explicitly replace it:
