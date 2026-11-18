@@ -22,7 +22,13 @@ def platform_options(settings: Settings) -> list[dict]:
     options = []
     for platform in PUBLISHING_PLATFORMS:
         enabled = platform in settings.posting_platforms
-        configured = all(present(field) for field in REQUIRED_FIELDS[platform])
+        fields = REQUIRED_FIELDS[platform]
+        if platform == "tumblr" and settings.tumblr_auto_refresh:
+            fields = (
+                "tumblr_blog_identifier", "tumblr_client_id", "tumblr_client_secret",
+                "mongodb_uri", "token_encryption_key",
+            )
+        configured = all(present(field) for field in fields)
         options.append(
             {
                 "platform": platform,

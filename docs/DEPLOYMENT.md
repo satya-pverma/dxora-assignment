@@ -1,12 +1,15 @@
 # UI and free deployment
 
-Status, 18 November 2026: configuration prepared; public deployment not yet verified.
-The current local model is Gemini `gemini-3.1-flash-lite`. Four destinations have
-confirmed live publication; WordPress remains deferred. See [verification](VERIFICATION.md).
+Status, 18 November 2026: the developer reports both flows working on Render and
+WordPress publication succeeding locally. MongoDB-backed Tumblr renewal is newly
+implemented and still requires a live Atlas/Tumblr check.
 
 The same FastAPI service serves the browser UI at `/`, Swagger at `/docs`, and
-both JSON endpoints. There is no frontend build, second service, database, or
-browser-side provider key. Analysis and publishing run independently.
+both JSON endpoints. There is no frontend build, second app service, or
+browser-side provider key. MongoDB Atlas is optional for persistent Tumblr token
+renewal; follow [the setup guide](TUMBLR_TOKEN_REFRESH.md), add its private variables
+in Render Environment, and keep the same encryption key across deploys.
+Analysis and publishing run independently.
 
 The publishing UI lists all five platforms with checkboxes. A platform is selectable
 only when it is listed in `POSTING_PLATFORMS` and its required credential fields are

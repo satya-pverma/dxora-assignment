@@ -6,6 +6,7 @@ from bs4 import BeautifulSoup
 from app.config import Settings
 from app.platforms.base import PlatformAdapter, PlatformError, PublishedPost
 from app.platforms.http import PlatformHTTP, contains_message
+from app.services.tumblr_tokens import get_tumblr_token
 from app.utils.message_validator import extract_cta_link
 
 
@@ -43,7 +44,7 @@ class TumblrAdapter(PlatformAdapter):
         self.http = http or PlatformHTTP(settings.posting_timeout_seconds)
 
     async def publish(self, message: str, cta_url: str) -> PublishedPost:
-        token = self.settings.tumblr_access_token.get_secret_value()
+        token = await get_tumblr_token(self.settings)
         blog = self.settings.tumblr_blog_identifier
         if not blog or not token.strip():
             raise PlatformError("missing_credentials")

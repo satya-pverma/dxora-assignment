@@ -36,6 +36,14 @@ class Settings(BaseSettings):
     wordpress_access_token: SecretStr = SecretStr("")
     tumblr_blog_identifier: str = ""
     tumblr_access_token: SecretStr = SecretStr("")
+    tumblr_auto_refresh: bool = False
+    tumblr_refresh_token: SecretStr = SecretStr("")
+    tumblr_client_id: str = ""
+    tumblr_client_secret: SecretStr = SecretStr("")
+    mongodb_uri: SecretStr = SecretStr("")
+    mongodb_database: str = Field(default="dxora_assignment", pattern=r"^[A-Za-z0-9_-]+$")
+    mongodb_collection: str = Field(default="tokens", pattern=r"^[A-Za-z0-9_-]+$")
+    token_encryption_key: SecretStr = SecretStr("")
     telegram_bot_token: SecretStr = SecretStr("")
     telegram_channel_id: str = ""
     telegram_channel_username: str = ""
