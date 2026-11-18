@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timezone
 from urllib.parse import urlsplit
 
@@ -8,6 +9,8 @@ from app.platforms.base import PlatformAdapter, PlatformError, PublishedPost
 from app.platforms.http import PlatformHTTP, contains_message
 from app.services.tumblr_tokens import get_tumblr_token
 from app.utils.message_validator import extract_cta_link
+
+logger = logging.getLogger(__name__)
 
 
 def npf_text(message: str) -> dict:
@@ -44,7 +47,15 @@ class TumblrAdapter(PlatformAdapter):
         self.http = http or PlatformHTTP(settings.posting_timeout_seconds)
 
     async def publish(self, message: str, cta_url: str) -> PublishedPost:
-        token = await get_tumblr_token(self.settings)
+        try:
+            token = await get_tumblr_token(self.settings)
+            if not isinstance(token, str):
+                raise TypeError
+        except PlatformError:
+            raise
+        except Exception as exc:
+            logger.error("Tumblr token acquisition failed exception_type=%s", type(exc).__name__)
+            raise PlatformError("token_storage_unavailable") from None
         blog = self.settings.tumblr_blog_identifier
         if not blog or not token.strip():
             raise PlatformError("missing_credentials")
@@ -59,6 +70,8 @@ class TumblrAdapter(PlatformAdapter):
             },
             publishing=True,
         )
+        if not isinstance(data, dict):
+            raise PlatformError("outcome_uncertain")
         meta = data.get("meta")
         status = meta.get("status") if isinstance(meta, dict) else None
         if type(status) is int and status in {401, 403, 429}:

@@ -12,7 +12,13 @@ from contextlib import contextmanager
 import httpx
 from cryptography.fernet import Fernet, InvalidToken
 from pymongo import MongoClient
-from pymongo.errors import DuplicateKeyError, PyMongoError
+from pymongo.errors import (
+    ConfigurationError,
+    ConnectionFailure,
+    DuplicateKeyError,
+    OperationFailure,
+    PyMongoError,
+)
 from pymongo.write_concern import WriteConcern
 
 from app.config import Settings
@@ -152,6 +158,21 @@ class TumblrTokenStore:
         raise PlatformError("token_refresh_busy")
 
 
+def storage_error_code(error: Exception) -> str:
+    if isinstance(error, InvalidToken):
+        return "token_encryption_mismatch"
+    if isinstance(error, OperationFailure):
+        if error.code == 18:
+            return "token_database_auth_failed"
+        if error.code == 13:
+            return "token_database_permission_denied"
+    if isinstance(error, ConnectionFailure):
+        return "token_database_unreachable"
+    if isinstance(error, (ConfigurationError, ValueError)):
+        return "token_storage_configuration_invalid"
+    return "token_storage_unavailable"
+
+
 def stored_token(settings: Settings) -> str:
     require_refresh_config(settings)
     try:
@@ -159,8 +180,8 @@ def stored_token(settings: Settings) -> str:
             return TumblrTokenStore(settings, collection).get_token()
     except PlatformError:
         raise
-    except (PyMongoError, InvalidToken, ValueError, KeyError, TypeError):
-        raise PlatformError("token_storage_unavailable") from None
+    except (PyMongoError, InvalidToken, ValueError, KeyError, TypeError) as exc:
+        raise PlatformError(storage_error_code(exc)) from None
 
 
 async def get_tumblr_token(settings: Settings) -> str:

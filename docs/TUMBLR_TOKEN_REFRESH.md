@@ -57,6 +57,17 @@ refresh token into independent stores.
 
 ## Failure and recovery
 
+Run a read-only connection and decryption diagnostic in the environment that fails:
+
+```powershell
+.\.venv\Scripts\python.exe -m scripts.check_tumblr_storage
+```
+
+On a host with Python on PATH, use `python -m scripts.check_tumblr_storage`.
+It does not seed, refresh, publish or print secrets. A successful local check does
+not prove Render is allowed by Atlas Network Access. Use the same encryption key,
+database, collection and app/blog identity wherever sharing one record.
+
 An atomic compare-and-set claim prevents concurrent workers refreshing the same
 token. Other requests wait briefly or return a busy error. Database/encryption
 errors fail closed rather than reverting to old environment tokens. Static-token

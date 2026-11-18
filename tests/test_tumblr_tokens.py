@@ -7,12 +7,13 @@ from types import SimpleNamespace
 import httpx
 import pytest
 from cryptography.fernet import Fernet, InvalidToken
+from pymongo.errors import ConfigurationError, OperationFailure, ServerSelectionTimeoutError
 
 from app.config import Settings
 from app.platforms.base import PlatformError
 from app.platforms.tumblr import TumblrAdapter
 from app.services.platform_selection import platform_options
-from app.services.tumblr_tokens import TumblrTokenStore, refresh_tumblr
+from app.services.tumblr_tokens import TumblrTokenStore, refresh_tumblr, storage_error_code
 
 
 class Collection:
@@ -42,6 +43,18 @@ class Collection:
             for key in update.get("$unset", {}):
                 self.doc.pop(key, None)
             return SimpleNamespace(modified_count=1)
+
+
+@pytest.mark.parametrize(("error", "code"), [
+    (InvalidToken(), "token_encryption_mismatch"),
+    (OperationFailure("private", code=18), "token_database_auth_failed"),
+    (OperationFailure("private", code=13), "token_database_permission_denied"),
+    (ServerSelectionTimeoutError("private"), "token_database_unreachable"),
+    (ConfigurationError("private"), "token_storage_configuration_invalid"),
+    (ValueError("private"), "token_storage_configuration_invalid"),
+])
+def test_storage_errors_are_classified_without_private_details(error, code):
+    assert storage_error_code(error) == code
 
 
 @pytest.fixture
@@ -192,3 +205,18 @@ def test_adapter_publishes_once_using_stored_access_token(settings, monkeypatch)
     assert str(result.url) == "https://testblog.tumblr.com/post/123"
     assert len(calls) == 1
     assert calls[0]["token"] == "stored-access"
+
+
+def test_unexpected_token_error_is_safe_and_never_posts(settings, monkeypatch, caplog):
+    async def broken_token(config):
+        raise RuntimeError("private-credential-value")
+
+    class HTTP:
+        async def request(self, *args, **kwargs):
+            pytest.fail("Must not publish after token acquisition fails")
+
+    monkeypatch.setattr("app.platforms.tumblr.get_tumblr_token", broken_token)
+    with pytest.raises(PlatformError, match="token_storage_unavailable"):
+        asyncio.run(TumblrAdapter(settings, HTTP()).publish("Test https://example.com", ""))
+    assert "exception_type=RuntimeError" in caplog.text
+    assert "private-credential-value" not in caplog.text
