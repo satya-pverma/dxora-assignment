@@ -251,7 +251,7 @@ def test_timeout_is_bounded():
     assert error.value.status_code == 504
 
 
-@pytest.mark.parametrize("mutation", ["queries", "platforms", "services", "quote", "volumes"])
+@pytest.mark.parametrize("mutation", ["queries", "platforms", "services", "volumes"])
 def test_rejects_invalid_analysis_contract(model_result, mutation):
     data = copy.deepcopy(model_result)
     analysis = data["analysis"]
@@ -299,13 +299,44 @@ def test_endpoint_returns_all_sections_and_evidence_warnings(model_result, monke
     assert len(data["metadata"]["warnings"]) == 4
 
 
-def test_rejects_fabricated_service_quote(model_result, monkeypatch):
-    model_result["analysis"]["top_services"][0]["source_quote"] = "We build spacecraft."
+@pytest.mark.parametrize(
+    ("label", "quote"),
+    [("observed", "We build spacecraft."), ("observed", None),
+     ("inferred_recommendation", "We offer web design.")],
+)
+def test_returns_unverified_service_quote(model_result, monkeypatch, label, quote):
+    model_result["analysis"]["top_services"][0]["evidence_type"] = label
+    model_result["analysis"]["top_services"][0]["source_quote"] = quote
     setup_api(model_result, monkeypatch)
     with TestClient(app) as client:
         response = client.post("/link-analysis", json={"url": "https://example.com"})
-    assert response.status_code == 502
-    assert response.json()["error"]["code"] == "llm_unsupported_claim"
+    assert response.status_code == 200
+    service = response.json()["analysis"]["top_services"][0]
+    assert service["evidence_type"] == "unverified_ai_output"
+    assert service["source_quote"] == quote
+
+
+def test_mismatched_quote_returns_without_extra_generation(model_result):
+    requests = []
+
+    def respond(request):
+        requests.append(json.loads(request.content))
+        result = copy.deepcopy(model_result)
+        if len(requests) == 1:
+            result["analysis"]["top_services"][0]["source_quote"] = "We build spacecraft."
+        return httpx.Response(200, json=completed(result))
+
+    class Extractor:
+        async def extract(self, url):
+            return website()
+
+    service = AnalysisService(Extractor(), LLMService(settings(), httpx.MockTransport(respond)))
+    result = asyncio.run(service.analyze("https://example.com/"))
+    assert len(requests) == 1
+    assert result.analysis.top_services[0].evidence_type == "unverified_ai_output"
+    assert result.metadata.input_tokens == 800
+    assert result.metadata.output_tokens == 1200
+    assert any("unverified AI output" in warning for warning in result.metadata.warnings)
 
 
 @pytest.mark.parametrize(

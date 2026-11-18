@@ -360,8 +360,22 @@ Planning input/output budget: 8,000/2,000 tokens; paid estimate:
 Observed local latency is roughly 14 seconds for one recorded run, including
 extraction. Performance across sites/models and factual accuracy remain
 unbenchmarked. Gemini uses low thinking for Gemini 3 models and local Pydantic
-validation. Content cleaning, truncation and a single call for all five sections
-reduce token use. Caching, automatic fallback and token refresh are future work.
+validation. Content cleaning, truncation and one initial call for all five sections
+reduce token use. Service quote mismatches do not reject an otherwise valid report.
+Matching excerpts are labelled observed; unmatched quotes and inconsistent evidence
+labels are returned as unverified_ai_output with report warnings. The dashboard
+labels these entries and quotes as unverified AI output. No additional generation
+is made for quote mismatches. The response schema includes this third evidence label.
+Caching, automatic provider fallback and token refresh are future work.
+The provider schema offers up to 256 literal source excerpts (300 characters each)
+as quote choices, plus null for recommendations. Local matching determines whether
+returned quotes are verified, without blocking the report on a mismatch.
+
+Temporary Gemini HTTP 500/502/503/504 and transport failures retry up to twice,
+with exponential backoff (about one then two seconds, plus jitter). All attempts,
+share the existing provider timeout. Authentication,
+quota (429), request/schema and output-validation failures are not retried by this
+transport policy. Retries may add latency and provider usage; publishing is unaffected.
 
 [The detailed research report](docs/INTEGRATION_RESEARCH.md) includes official
 pricing/model sources, cost calculations, caveats, a benchmark rubric, and the

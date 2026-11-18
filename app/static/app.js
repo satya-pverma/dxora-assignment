@@ -126,12 +126,12 @@ function renderAnalysis(data) {
   analysis.top_services.forEach((item, index) => {
     const entry = node('article', undefined, 'service-entry');
     const heading = node('div', undefined, 'service-heading');
-    heading.append(node('span', String(index + 1).padStart(2, '0'), 'row-number'), node('h4', item.name), node('span', item.evidence_type === 'observed' ? 'On website' : 'Proposed offering', item.evidence_type === 'observed' ? 'tag' : 'tag proposed'));
+    heading.append(node('span', String(index + 1).padStart(2, '0'), 'row-number'), node('h4', item.name), node('span', item.evidence_type === 'observed' ? 'On website' : item.evidence_type === 'inferred_recommendation' ? 'Proposed offering' : 'Unverified AI output', item.evidence_type === 'observed' ? 'tag' : 'tag proposed'));
     entry.append(heading, node('p', item.description));
     const facts = node('dl', undefined, 'service-facts');
     [['Industry', item.target_industry], ['Customer', item.target_customer], ['Benefit', item.main_benefit]].forEach(([label, value]) => { const pair = node('div'); pair.append(node('dt', label), node('dd', value)); facts.append(pair); });
     entry.append(facts);
-    if (item.source_quote) { const evidence = node('details', undefined, 'evidence'); evidence.append(node('summary', 'Website evidence'), node('blockquote', item.source_quote)); entry.append(evidence); }
+    if (item.source_quote) { const evidence = node('details', undefined, 'evidence'); evidence.append(node('summary', item.evidence_type === 'observed' ? 'Website evidence' : 'AI-generated quote · unverified'), node('blockquote', item.source_quote)); entry.append(evidence); }
     services.append(entry);
   });
   const audience = analysis.target_audience;

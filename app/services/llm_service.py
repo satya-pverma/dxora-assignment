@@ -1,4 +1,4 @@
-"""One bounded OpenAI Responses API call, followed by local schema validation."""
+"""Bounded OpenAI Responses API generation, followed by local schema validation."""
 
 import asyncio
 import json
@@ -25,11 +25,25 @@ Instagram, LinkedIn and X collectively. Include intent, relevance and audience.
 Recommend keywords, title, description, supporting pages and audience segments.
 Return exactly five service entries, prioritizing actual offerings. For each
 observed service, source_quote must be an exact nonempty excerpt from the supplied
-text. If fewer than five services are evidenced, fill remaining slots with clearly
+text field, preserving its words, punctuation and capitalization. The schema
+provides allowed source_quote excerpts: choose one relevant excerpt verbatim.
+If none supports the service, use an inferred recommendation instead. Copy a short
+contiguous passage; do not paraphrase, combine separate passages, add ellipses,
+or quote only title, headings or meta_description fields. If fewer than five
+services are evidenced, fill remaining slots with clearly
 labelled inferred_recommendation entries and source_quote=null. Never present a
 recommended service as an existing offering. Audience segments, SEO changes,
 competitive advantages and opportunities are recommendations, not verified facts.
 Keep each explanation concise. Unknown geographical_focus must be null.
+"""
+
+
+QUOTE_REPAIR_PROMPT = """
+The previous response failed source-quote validation. Regenerate the report.
+For observed services, copy a short contiguous quote directly from the text field.
+Do not paraphrase or join disconnected fragments. If an offering cannot be
+supported, replace it with a clearly proposed inferred_recommendation with
+source_quote=null and recommendation wording throughout that entry.
 """
 
 
@@ -48,7 +62,9 @@ class AnalysisLLM(Protocol):
 
     def require_credentials(self) -> None: ...
 
-    async def analyze(self, website: ExtractedWebsite) -> tuple[ModelAnalysis, dict]: ...
+    async def analyze(
+        self, website: ExtractedWebsite, *, repair_quotes: bool = False
+    ) -> tuple[ModelAnalysis, dict]: ...
 
 
 def classify_limit_error(body: bytes) -> LLMError:
@@ -96,8 +112,17 @@ def classify_limit_error(body: bytes) -> LLMError:
     return LLMError(public_code, message, 503)
 
 
-def provider_schema() -> dict:
+def provider_schema(website: ExtractedWebsite | None = None) -> dict:
     schema = ModelAnalysis.model_json_schema()
+    if website is not None:
+        # Supply literal choices rather than asking the model to reconstruct copy.
+        # Bound schema growth and preserve exact substrings, including punctuation.
+        excerpts = list(dict.fromkeys(
+            line.strip()[:300] for line in website.text.splitlines() if line.strip()
+        ))[:256]
+        schema["$defs"]["Service"]["properties"]["source_quote"]["enum"] = [
+            None, *excerpts,
+        ]
 
     def simplify(node):
         if isinstance(node, dict):
@@ -129,12 +154,14 @@ class LLMService:
         if not self.settings.openai_api_key.get_secret_value().strip():
             raise LLMError("llm_not_configured", "Configure OPENAI_API_KEY on the server.", 503)
 
-    async def analyze(self, website: ExtractedWebsite) -> tuple[ModelAnalysis, dict]:
+    async def analyze(
+        self, website: ExtractedWebsite, *, repair_quotes: bool = False
+    ) -> tuple[ModelAnalysis, dict]:
         self.require_credentials()
         payload = {
             "model": self.settings.llm_model,
             "store": False,
-            "instructions": SYSTEM_PROMPT,
+            "instructions": SYSTEM_PROMPT + (QUOTE_REPAIR_PROMPT if repair_quotes else ""),
             "input": [{"role": "user", "content": website.model_dump_json()}],
             "reasoning": {"effort": "none"},
             "max_output_tokens": self.settings.llm_max_output_tokens,
@@ -143,7 +170,7 @@ class LLMService:
                     "type": "json_schema",
                     "name": "website_analysis",
                     "strict": True,
-                    "schema": provider_schema(),
+                    "schema": provider_schema(website),
                 }
             },
         }
