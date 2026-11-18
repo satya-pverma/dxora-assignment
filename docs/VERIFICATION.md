@@ -2,21 +2,33 @@
 
 ## Recorded status
 
-Status as of 17 November 2026. The 196-test result below was supplied from the
-developer's normal Windows PowerShell terminal, running Python 3.13.17. It was
-not a successful live publishing or LLM run. CI for the final PR must be checked
-separately after pushing it.
+The developer-supplied [live four-platform response](evidence/posting-live-2026-11-18.json)
+is now saved in the repository. See [evidence context](evidence/README.md) for its
+scope and the unresolved Mastodon/Tumblr visibility checks.
+
+Status as of **18 November 2026**. Full-suite results were supplied by the
+developer from Windows PowerShell, Python 3.13.17. Live results below distinguish
+provider confirmation from anonymous visibility. They summarize observed runs in
+the development session. The publishing response above is archived; analysis and
+deployment artifacts remain pending.
 
 | Check | Evidence | Status |
 | --- | --- | --- |
-| Full regression suite | `196 passed, 1 warning in 1.02s` | Passed in the developer's terminal |
-| Ruff | `All checks passed!` | Passed in the same terminal |
-| Compilation, OpenAPI and example schemas | Local static checks in the editing session | Passed |
-| Live website HTTP/TLS/SNI | No recorded external fetch | Pending |
-| Live `/link-analysis` | No configured OpenAI key or actual response | Pending |
-| Actual five-platform publication | No configured publishing credentials or posted URLs | Pending |
-| Model quality, cost and latency benchmark | Comparison and estimates exist; no live measurements | Pending |
-| Sanitized screenshots/logs of live behavior | None recorded | Pending |
+| Full regression suite | Developer terminal: 255 passed, one warning | Passed |
+| Ruff | Developer terminal: All checks passed | Passed |
+| Compilation and OpenAPI | Local static checks during implementation | Passed |
+| Live extraction | HTTPS example.com and portfolio extraction | Passed |
+| Live analysis | Gemini gemini-3.1-flash-lite; five validated sections | Passed locally |
+| Analysis latency | One observed response: 14.073 seconds end to end | Observation, not benchmark |
+| Mastodon publication | Successful live result, post URL retained | Published; anonymous verification inconclusive |
+| Bluesky publication | Successful live result with public_access=true | Published and automatically verified |
+| Tumblr publication | Successful live result, post URL retained | Published; anonymous verification inconclusive |
+| Telegram publication | Successful live result with public_access=true | Published and automatically verified |
+| WordPress.com | Adapter/mock tests exist; account setup deferred after browser connectivity failure | Live test pending |
+| Public deployment and hosted /docs | render.yaml and deployment guide supplied | Pending |
+| Final GitHub CI and clean setup | Not independently confirmed on final commit | Pending |
+| Token costs and multi-model accuracy/latency | Dated comparison exists; no archived usage/billing benchmark | Pending |
+| Sanitized evidence files | Examples remain synthetic | Pending |
 
 The one warning concerns deprecated HTTPX use in Starlette TestClient. Tests
 still pass; the production clients use HTTPX directly. A dependency migration is
@@ -67,16 +79,35 @@ For the first startup, bind to loopback in a terminal:
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 4000
 ```
 
-The assignment's `--host 0.0.0.0` command also works when needed. No inbound API
-authentication is implemented, so choose the listening interface deliberately.
-Keep this assignment service local to the intended test environment.
+The assignment's `--host 0.0.0.0` command also works when needed. Set a nonempty
+`DEMO_ACCESS_KEY` to require the `X-Demo-Key` header on analysis and both posting
+routes. Enter it under Demo access in the UI. An empty key leaves these actions
+open. Restart after configuration changes; do not remove the key to run tests.
+Tests isolate application settings from the local key.
+
+The analysis limiter permits two valid authorized attempts per client IP in a
+rolling minute. Further attempts return 429 and Retry-After. Bad credentials and
+invalid request bodies do not count. Automated tests use an isolated limiter.
 
 ## Read-only checks before publication
+
+For Telegram setup and transport diagnosis, use:
+
+```powershell
+.\.venv\Scripts\python.exe -m scripts.check_telegram
+.\.venv\Scripts\python.exe -m scripts.check_telegram --transport
+```
+
+Both make read-only Telegram calls and hide tokens. The transport check now
+prefers public IPv4 when available; this resolved the observed pinned-connection
+timeout. It does not disable DNS validation, Host/SNI, or certificate checks.
+
 
 1. Open `http://localhost:4000/docs` and check the request/response contracts.
 2. Run `Invoke-RestMethod http://localhost:4000/health`; expect `status=ok`.
 3. Send a request with a missing URL or a posting message without a CTA; expect
-   HTTP 422 and no provider call. Use the documented sample request shapes.
+   HTTP 422 and no provider call when the correct demo key is supplied. Missing
+   or incorrect keys return 401 first. Use the documented sample request shapes.
 4. To verify extraction without an LLM call, run the following. It fetches the
    public website but does not publish or use model credits:
 

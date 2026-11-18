@@ -1,0 +1,41 @@
+{
+  "success": true,
+  "results": [
+    {
+      "platform": "mastodon",
+      "status": "success",
+      "posted_url": "https://mastodon.social/@satyaverma0075/117637082237076276",
+      "public_access": false,
+      "date": "2026-11-18",
+      "time": "10:57:03.786000",
+      "error": "Public access could not be verified."
+    },
+    {
+      "platform": "bluesky",
+      "status": "success",
+      "posted_url": "https://bsky.app/profile/did:plc:r2gbjdilcrwvtfnhqst3rdvp/post/3n2lfjliv2f2h",
+      "public_access": true,
+      "date": "2026-11-18",
+      "time": "10:57:02.794243",
+      "error": null
+    },
+    {
+      "platform": "tumblr",
+      "status": "success",
+      "posted_url": "https://satya-dxora-test.tumblr.com/post/833617315513909248",
+      "public_access": false,
+      "date": "2026-11-18",
+      "time": "10:57:02.663940",
+      "error": "Public access could not be verified."
+    },
+    {
+      "platform": "telegram",
+      "status": "success",
+      "posted_url": "https://t.me/dxora_satya_test/3",
+      "public_access": true,
+      "date": "2026-11-18",
+      "time": "10:57:05",
+      "error": null
+    }
+  ]
+}

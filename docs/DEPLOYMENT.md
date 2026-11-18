@@ -1,5 +1,9 @@
 # UI and free deployment
 
+Status, 18 November 2026: configuration prepared; public deployment not yet verified.
+The current local model is Gemini `gemini-3.1-flash-lite`. Four destinations have
+confirmed live publication; WordPress remains deferred. See [verification](VERIFICATION.md).
+
 The same FastAPI service serves the browser UI at `/`, Swagger at `/docs`, and
 both JSON endpoints. There is no frontend build, second service, database, or
 browser-side provider key. Analysis and publishing run independently.
@@ -37,7 +41,8 @@ share the proxy's quota. Do not trust forwarded headers from arbitrary internet 
    the expandable JSON. Switch to publishing to enter a message with exactly one
    HTTP(S) link and at most 200 Unicode characters.
 4. Publishing requires the confirmation checkbox. It publishes real messages to
-   every server-configured platform. Missing credentials produce explicit failures;
+   each UI-selected platform. The original `/posting` endpoint uses all
+   server-configured platforms. Missing credentials produce explicit failures;
    Gemini credentials alone do not enable social publishing. Do not resubmit an
    ambiguous publication without checking the destination for an existing post.
 
@@ -80,10 +85,11 @@ Alternatively, **New > Blueprint** can use the included `render.yaml`. It create
 a Free service, prompts for `GEMINI_API_KEY`, and generates `DEMO_ACCESS_KEY`.
 Retrieve that generated value from the service's Environment page for UI access.
 
-The UI and docs remain public. When `DEMO_ACCESS_KEY` is nonempty, both POST
+The UI and docs remain public. When `DEMO_ACCESS_KEY` is nonempty, all three action POST
 endpoints require an `X-Demo-Key` header (also shown in Swagger). Locally, leaving
 it empty preserves the original unauthenticated assignment API. This shared demo
-gate is not a multi-user authentication or rate-limiting system.
+gate is shared authentication, not per-user accounts. The analysis endpoint has
+a separate two-per-minute IP limit; posting does not have that analysis limit.
 
 Never upload `.env`, paste keys into frontend source, or include credentials in
 screenshots. Hosting and Gemini free quotas are separate; monitor both dashboards.
