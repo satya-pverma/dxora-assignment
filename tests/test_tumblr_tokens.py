@@ -211,7 +211,9 @@ def test_dashboard_accepts_database_mode_without_stale_bootstrap_token(settings)
     assert option["available"] is True
 
 
-def test_refresh_endpoint_uses_form_body_and_no_redirects(settings, monkeypatch):
+@pytest.mark.parametrize("http2", [False, True])
+def test_refresh_endpoint_uses_form_body_and_no_redirects(settings, monkeypatch, http2):
+    settings.tumblr_refresh_http2 = http2
     captured = []
     original_client = httpx.Client
 
@@ -227,6 +229,7 @@ def test_refresh_endpoint_uses_form_body_and_no_redirects(settings, monkeypatch)
     def client(**kwargs):
         assert kwargs["trust_env"] is False
         assert kwargs["follow_redirects"] is False
+        assert kwargs["http2"] is http2
         return original_client(**kwargs, transport=httpx.MockTransport(handler))
 
     monkeypatch.setattr("app.services.tumblr_tokens.httpx.Client", client)

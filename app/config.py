@@ -37,6 +37,7 @@ class Settings(BaseSettings):
     tumblr_blog_identifier: str = ""
     tumblr_access_token: SecretStr = SecretStr("")
     tumblr_auto_refresh: bool = False
+    tumblr_refresh_http2: bool = False
     tumblr_refresh_token: SecretStr = SecretStr("")
     tumblr_client_id: str = ""
     tumblr_client_secret: SecretStr = SecretStr("")
