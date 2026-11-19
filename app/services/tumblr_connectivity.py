@@ -1,4 +1,4 @@
-"""Credential-free GET probes of a fixed Tumblr endpoint; no OAuth mutations."""
+"""Fixed credential-free probes; no valid grant, refresh token or publication."""
 
 import ipaddress
 import socket
@@ -21,6 +21,8 @@ def check_tumblr_connectivity(transport=None, resolve=socket.getaddrinfo) -> dic
     except (OSError, ValueError, StopIteration):
         checks.append({"mode": "ipv4", "reachable": False, "stage": "dns"})
     targets.append(("hostname_http2", URL, True))
+    targets.append(("token_post", URL, False))
+    targets.append(("api_control", "https://api.tumblr.com/v2/user/info", False))
     for mode, target, http2 in targets:
         started = time.monotonic()
         stage = "connect"
@@ -44,7 +46,10 @@ def check_tumblr_connectivity(transport=None, resolve=socket.getaddrinfo) -> dic
                 http2=http2,
             ) as client:
                 with client.stream(
-                    "GET", target, headers={"Host": "api.tumblr.com"},
+                    "POST" if mode == "token_post" else "GET", target,
+                    headers={"Host": "api.tumblr.com",
+                             "Content-Type": "application/x-www-form-urlencoded"},
+                    content=b"",
                     extensions={"sni_hostname": "api.tumblr.com", "trace": trace},
                 ) as response:
                     checks.append({
@@ -53,9 +58,18 @@ def check_tumblr_connectivity(transport=None, resolve=socket.getaddrinfo) -> dic
                         "elapsed_seconds": round(time.monotonic() - started, 2),
                     })
         except httpx.HTTPError as exc:
-            checks.append({
+            failure = {
                 "mode": mode, "reachable": False, "stage": stage,
                 "exception_type": type(exc).__name__,
                 "elapsed_seconds": round(time.monotonic() - started, 2),
-            })
-    return {"checks": checks, "note": "GET only. No credentials, refresh or publication."}
+            }
+            if isinstance(exc, httpx.RemoteProtocolError):
+                failure["protocol_reason"] = (
+                    "closed_without_response" if "without sending a response" in str(exc)
+                    else "invalid_http_response"
+                )
+            checks.append(failure)
+    return {
+        "checks": checks,
+        "note": "No credentials or valid OAuth grant; no refresh or publication.",
+    }

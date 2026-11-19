@@ -11,7 +11,7 @@ def test_probes_send_no_credentials_and_accept_http_error_responses():
 
     def handler(request):
         calls.append(request)
-        assert request.method == "GET"
+        assert request.method in {"GET", "POST"}
         assert "authorization" not in request.headers
         assert not request.content
         assert request.headers["host"] == "api.tumblr.com"
@@ -21,9 +21,10 @@ def test_probes_send_no_credentials_and_accept_http_error_responses():
         httpx.MockTransport(handler),
         resolve=lambda *args: [(None, None, None, None, ("8.8.8.8", 443))],
     )
-    assert len(calls) == 3
+    assert len(calls) == 5
+    assert sum(request.method == "POST" for request in calls) == 1
     assert [check["mode"] for check in result["checks"]] == [
-        "hostname", "ipv4", "hostname_http2",
+        "hostname", "ipv4", "hostname_http2", "token_post", "api_control",
     ]
     assert all(check["reachable"] and check["http_status"] == 405 for check in result["checks"])
 
