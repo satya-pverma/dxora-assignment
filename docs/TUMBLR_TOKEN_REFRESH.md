@@ -57,6 +57,16 @@ refresh token into independent stores.
 
 ## Failure and recovery
 
+Without Render Shell, use Swagger `/docs` to execute the demo-key-protected
+`GET /dashboard/diagnostics/tumblr` endpoint. Enter the `x-demo-key` header.
+It performs credential-free GETs to the fixed OAuth endpoint using hostname and
+public IPv4, preserving Host/SNI and certificate validation. Any HTTP response
+proves HTTPS connectivity, not successful token refresh. The response includes
+only status, timing and safe failure stage/type. Checks are limited to two per
+minute per process; no database changes, OAuth renewal or publication occur.
+DNS resolution runs in the worker thread and follows system resolver timeouts;
+each HTTP probe has an eight-second timeout.
+
 Run a read-only connection and decryption diagnostic in the environment that fails:
 
 ```powershell
