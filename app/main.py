@@ -22,11 +22,13 @@ from app.services.llm_service import LLMError
 from app.services.platform_selection import platform_options
 from app.services.posting_service import PostingService
 from app.services.rate_limiter import AnalysisRateLimiter, AnalysisRateLimitError
+from app.services.tumblr_connectivity import check_tumblr_connectivity
 from app.services.website_extractor import WebsiteExtractor
 from app.utils.validators import WebsiteError
 
 app = FastAPI(title=get_settings().app_name)
 analysis_rate_limiter = AnalysisRateLimiter()
+connectivity_rate_limiter = AnalysisRateLimiter()
 STATIC_DIR = Path(__file__).parent / "static"
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
@@ -129,6 +131,23 @@ async def posting(
 @app.get("/dashboard/platforms", tags=["dashboard"])
 def dashboard_platforms() -> dict:
     return {"platforms": platform_options(get_settings())}
+
+
+@app.get(
+    "/dashboard/diagnostics/tumblr", tags=["dashboard"],
+    dependencies=[Depends(require_demo_access)],
+)
+def tumblr_connectivity(request: Request) -> dict:
+    if not get_settings().demo_access_key.get_secret_value():
+        raise HTTPException(503, "Configure a demo access key to enable diagnostics.")
+    try:
+        connectivity_rate_limiter.consume("tumblr-connectivity")
+    except AnalysisRateLimitError as exc:
+        raise HTTPException(
+            429, "Connectivity checks are limited to two per minute.",
+            headers={"Retry-After": str(exc.retry_after)},
+        ) from None
+    return check_tumblr_connectivity()
 
 
 @app.post(
