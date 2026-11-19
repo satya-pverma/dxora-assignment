@@ -65,6 +65,10 @@ and certificate validation. Any HTTP response
 proves HTTPS connectivity, not successful token refresh. The response includes
 only status, timing and safe failure stage/type. Checks are limited to two per
 minute per process; no database changes, OAuth renewal or publication occur.
+It also sends one empty form POST to the token endpoint and an unauthenticated GET
+to `/v2/user/info` to distinguish token-path/method failures from general API access.
+No request contains a valid OAuth grant, credentials or refresh token. A protocol
+error includes an allowlisted reason, never the raw upstream exception message.
 DNS resolution runs in the worker thread and follows system resolver timeouts;
 each HTTP probe has an eight-second timeout.
 If `hostname_http2` succeeds with `http_version=HTTP/2` while HTTP/1.1 probes fail,
