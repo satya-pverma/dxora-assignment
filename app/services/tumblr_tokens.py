@@ -82,7 +82,9 @@ def refresh_tumblr(settings: Settings, refresh_token: str) -> dict:
 
 def _refresh_tumblr_request(settings: Settings, refresh_token: str, trace) -> dict:
     # Fixed HTTPS destination, form body credentials, no proxy/redirects/retries.
-    with httpx.Client(timeout=8, trust_env=False, follow_redirects=False) as client:
+    with httpx.Client(
+        timeout=8, trust_env=False, follow_redirects=False, http2=settings.tumblr_refresh_http2,
+    ) as client:
         with client.stream(
             "POST", "https://api.tumblr.com/v2/oauth2/token",
             data={"grant_type": "refresh_token", "refresh_token": refresh_token,

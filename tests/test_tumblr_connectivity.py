@@ -21,7 +21,10 @@ def test_probes_send_no_credentials_and_accept_http_error_responses():
         httpx.MockTransport(handler),
         resolve=lambda *args: [(None, None, None, None, ("8.8.8.8", 443))],
     )
-    assert len(calls) == 2
+    assert len(calls) == 3
+    assert [check["mode"] for check in result["checks"]] == [
+        "hostname", "ipv4", "hostname_http2",
+    ]
     assert all(check["reachable"] and check["http_status"] == 405 for check in result["checks"])
 
 
